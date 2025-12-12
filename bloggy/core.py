@@ -187,12 +187,12 @@ def layout(*content, htmx, title=None, show_sidebar=False):
                         ),
                         open=True
                     ),
-                    cls="hidden xl:block w-64 shrink-0 sticky top-24 h-fit"
+                    cls="hidden lg:block w-64 shrink-0 sticky top-24 h-fit"
                 ),
                 # Main content
                 Main(*content, cls="flex-1 min-w-0 px-6 py-8 space-y-8", id="main-content"),
                 # Right sidebar placeholder for TOC (to be implemented)
-                Aside(cls="hidden xl:block w-64 shrink-0")
+                Aside(cls="hidden lg:block w-64 shrink-0")
             ),
             Footer(Div(f"Powered by Bloggy", cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), # right justified footer
                    cls="w-full max-w-7xl mx-auto px-6 mt-auto mb-6")

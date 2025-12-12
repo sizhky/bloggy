@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bloggy"
-version = "0.1.0"
+version = "0.1.5"
 description = "A lightweight, elegant blogging platform built with FastHTML"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -32,6 +32,7 @@ dependencies = [
     "mistletoe>=1.4.0",
     "python-frontmatter>=1.1.0",
     "uvicorn>=0.30.0",
+    "monsterui>=0.0.37",
 ]
 
 [project.optional-dependencies]
@@ -51,6 +52,7 @@ Issues = "https://github.com/yeshwanth/bloggy/issues"
 
 [tool.setuptools]
 packages = ["bloggy"]
+include-package-data = true
 
 [tool.setuptools.package-data]
 bloggy = ["static/*", "static/**/*"]
