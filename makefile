@@ -1,4 +1,4 @@
-.PHONY: clean build test publish install dev
+.PHONY: clean build test publish install dev bump-major bump-minor bump-patch
 
 clean:
 	rm -rf dist/ build/ *.egg-info
@@ -18,7 +18,20 @@ install:
 dev:
 	bloggy demo/
 
-publish: build
+# Version bumping
+bump-major:
+	@echo "Bumping major version..."
+	@python bump_version.py major
+
+bump-minor:
+	@echo "Bumping minor version..."
+	@python bump_version.py minor
+
+bump-patch:
+	@echo "Bumping patch version..."
+	@python bump_version.py patch
+
+publish: bump-patch build
 	python -m twine upload --repository sizhky dist/*
 
 publish-test: build

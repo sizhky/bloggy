@@ -5,6 +5,7 @@ from fasthtml.common import *
 from fasthtml.jupyter import *
 from monsterui.all import *
 from starlette.staticfiles import StaticFiles
+from .config import get_config
 
 slug_to_title = lambda s: ' '.join(word.capitalize() for word in s.replace('-', ' ').replace('_', ' ').split())
 
@@ -134,8 +135,8 @@ def from_md(content, img_dir='/static/images'):
     return Div(Link(rel="stylesheet", href="/static/sidenote.css"), NotStr(apply_classes(html, class_map_mods=mods)), cls="w-full")
 
 # App configuration
-def get_root_folder(): return Path(os.getenv('BLOGGY_ROOT', '.')).resolve()
-def get_blog_title(): return os.getenv('BLOGGY_TITLE', slug_to_title(get_root_folder().name)).upper()
+def get_root_folder(): return get_config().get_root_folder()
+def get_blog_title(): return get_config().get_blog_title()
 
 hdrs = (
     *Theme.slate.headers(highlightjs=True),
@@ -187,12 +188,12 @@ def layout(*content, htmx, title=None, show_sidebar=False):
                         ),
                         open=True
                     ),
-                    cls="hidden lg:block w-64 shrink-0 sticky top-24 h-fit"
+                    cls="hidden md:block w-64 shrink-0 sticky top-24 h-fit"
                 ),
                 # Main content
                 Main(*content, cls="flex-1 min-w-0 px-6 py-8 space-y-8", id="main-content"),
                 # Right sidebar placeholder for TOC (to be implemented)
-                Aside(cls="hidden lg:block w-64 shrink-0")
+                Aside(cls="hidden md:block w-64 shrink-0")
             ),
             Footer(Div(f"Powered by Bloggy", cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), # right justified footer
                    cls="w-full max-w-7xl mx-auto px-6 mt-auto mb-6")

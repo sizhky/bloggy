@@ -1,0 +1,20 @@
+# Bloggy Configuration File
+# 
+# This file uses TOML format for configuration.
+# All settings are optional - environment variables and defaults will be used as fallback.
+# 
+# Priority: .bloggy file > environment variables > defaults
+
+# Blog title (default: derives from root folder name)
+title = "NL2SQL"
+
+# Root folder containing markdown files (default: current directory)
+# Can be absolute or relative path
+root = "."
+
+# Server host (default: 127.0.0.1)
+# Use "0.0.0.0" to make the server accessible from network
+host = "127.0.0.1"
+
+# Server port (default: 5001)
+port = 5001

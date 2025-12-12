@@ -1,6 +1,9 @@
 from pathlib import Path
 import sys
 import os
+from .config import get_config, reload_config
+
+# Import app at module level, but config will be initialized before it's used
 from .core import app
 
 def cli():
@@ -14,6 +17,9 @@ def cli():
         BLOGGY_ROOT: Path to markdown files
         BLOGGY_HOST: Server host (default: 127.0.0.1)
         BLOGGY_PORT: Server port (default: 5001)
+        
+    Configuration file:
+        Create a .bloggy file (TOML format) in your blog directory
     """
     import uvicorn
     import argparse
@@ -34,13 +40,18 @@ def cli():
             sys.exit(1)
         os.environ['BLOGGY_ROOT'] = str(root)
     
-    # Get host and port from arguments, environment, or use defaults
-    host = args.host or os.getenv('BLOGGY_HOST', '127.0.0.1')
-    port = args.port or int(os.getenv('BLOGGY_PORT', '5001'))
+    # Initialize or reload config to pick up .bloggy file
+    # This ensures .bloggy file is loaded and config is refreshed
+    config = reload_config() if args.directory else get_config()
+    
+    # Get host and port from arguments, config, or use defaults
+    host = args.host or config.get_host()
+    port = args.port or config.get_port()
     reload = not args.no_reload
     
     print(f"Starting Bloggy server...")
-    print(f"Blog root: {os.getenv('BLOGGY_ROOT', Path.cwd())}")
+    print(f"Blog root: {config.get_root_folder()}")
+    print(f"Blog title: {config.get_blog_title()}")
     print(f"Serving at: http://{host}:{port}")
     if host == '0.0.0.0':
         print(f"Server accessible from network at: http://<your-ip>:{port}")

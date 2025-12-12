@@ -313,14 +313,58 @@ pip install -e .
 
 ## Configuration
 
+Bloggy supports three ways to configure your blog (in priority order):
+
+1. **`.bloggy` configuration file** (TOML format)
+2. **Environment variables**
+3. **Default values**
+
+### Using a `.bloggy` Configuration File
+
+Create a `.bloggy` file in your blog directory or current directory:
+
+```toml
+# Blog title (default: derives from root folder name)
+title = "My Awesome Blog"
+
+# Root folder containing markdown files (default: current directory)
+root = "."
+
+# Server host (default: 127.0.0.1)
+# Use "0.0.0.0" to make the server accessible from network
+host = "127.0.0.1"
+
+# Server port (default: 5001)
+port = 5001
+```
+
+All settings in the `.bloggy` file are optional. See `.bloggy.example` for a full example.
+
 ### Environment Variables
+
+You can also use environment variables as a fallback:
 
 - `BLOGGY_ROOT`: Path to your markdown files (default: current directory)
 - `BLOGGY_TITLE`: Your blog's title (default: folder name)
 - `BLOGGY_HOST`: Server host (default: 127.0.0.1)
 - `BLOGGY_PORT`: Server port (default: 5001)
 
-### Example
+### Examples
+
+**Using a `.bloggy` file:**
+
+```bash
+# Create a .bloggy file in your blog directory
+cd /path/to/your/blog
+cat > .bloggy << EOF
+title = "My Tech Blog"
+port = 8000
+EOF
+
+bloggy
+```
+
+**Using environment variables:**
 
 ```bash
 export BLOGGY_ROOT=/path/to/your/markdown/files
@@ -329,8 +373,12 @@ export BLOGGY_PORT=8000
 bloggy
 ```
 
-Or pass the directory directly:
+**Passing directory as argument:**
 
 ```bash
 bloggy /path/to/your/markdown/files
 ```
+
+**Configuration priority example:**
+
+If you have both a `.bloggy` file with `port = 8000` and an environment variable `BLOGGY_PORT=9000`, the `.bloggy` file takes precedence and port 8000 will be used.
