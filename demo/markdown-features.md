@@ -4,36 +4,85 @@ title: A Small Demonstration of All The Markdown Features That Are Under The Sun
 
 ## Headings
 
-### Setext Style
+:::tabs
+::tab{title="Rendered"}
+## Headings
+::tab{title="Markdown Source"}
+```markdown
+## Headings
+```
+:::
 
+:::tabs
+::tab{title="Rendered"}
+### Setext Style
 Heading Level 1
 ===============
-
 Heading Level 2
 ---------------
+::tab{title="Markdown Source"}
+```
+### Setext Style
+Heading Level 1
+===============
+Heading Level 2
+---------------
+```
+:::
 
+:::tabs
+::tab{title="Rendered"}
 ### ATX Style
-
 # Heading Level 1
 ## Heading Level 2
 ### Heading Level 3
 #### Heading Level 4
 ##### Heading Level 5
+::tab{title="Markdown Source"}
+```
+### ATX Style
+# Heading Level 1
+## Heading Level 2
+### Heading Level 3
+#### Heading Level 4
+##### Heading Level 5
+```
+:::
 
 ## Paragraphs
 
+:::tabs
+::tab{title="Rendered"}
 This is a paragraph. It contains multiple sentences to demonstrate how paragraphs work in Markdown.
+::tab{title="Markdown Source"}
+```markdown
+This is a paragraph. It contains multiple sentences to demonstrate how paragraphs work in Markdown.
+```
+:::
 
 ## Line Breaks
 
+:::tabs
+::tab{title="Rendered"}
 Soft line break (just press Enter):
 This is the next line.
 
 Hard line break (use two spaces at the end of the line):  
 This is the next line.
+::tab{title="Markdown Source"}
+```markdown
+Soft line break (just press Enter):
+This is the next line.
+
+Hard line break (use two spaces at the end of the line):  
+This is the next line.
+```
+:::
 
 ## Emphasis
 
+:::tabs
+::tab{title="Rendered"}
 *Italics* using single asterisks.  
 _Italics_ using single underscores.
 
@@ -42,15 +91,38 @@ __Bold__ using double underscores.
 
 ***Bold and Italics*** using triple asterisks.  
 ___Bold and Italics___ using triple underscores.
+::tab{title="Markdown Source"}
+```markdown
+*Italics* using single asterisks.  
+_Italics_ using single underscores.
+
+**Bold** using double asterisks.  
+__Bold__ using double underscores.
+
+***Bold and Italics*** using triple asterisks.  
+___Bold and Italics___ using triple underscores.
+```
+:::
 
 ## Blockquotes
 
+:::tabs
+::tab{title="Rendered"}
 > This is a blockquote.
 >
 > > Nested blockquote.
+::tab{title="Markdown Source"}
+```markdown
+> This is a blockquote.
+>
+> > Nested blockquote.
+```
+:::
 
 ## Lists
 
+:::tabs
+::tab{title="Rendered"}
 ### Ordered List
 
 1. First item
@@ -73,9 +145,37 @@ ___Bold and Italics___ using triple underscores.
 
 - [x] Completed task
 - [ ] Incomplete task
+::tab{title="Markdown Source"}
+```markdown
+### Ordered List
+
+1. First item
+2. Second item
+3. Third item
+
+### Unordered List
+
+- First item
+- Second item
+- Third item
+
+### Nested List
+
+- Parent item
+  - Child item
+    - Grandchild item
+
+### Task List
+
+- [x] Completed task
+- [ ] Incomplete task
+```
+:::
 
 ## Code
 
+:::tabs
+::tab{title="Rendered"}
 ### Inline Code
 
 Use `inline code` for short snippets.
@@ -91,13 +191,41 @@ Use `inline code` for short snippets.
 def hello_world():
     print("Hello, world!")
 ```
+::tab{title="Markdown Source"}
+```markdown
+### Inline Code
+
+Use `inline code` for short snippets.
+
+### Indented Code Block
+
+    def hello_world():
+        print("Hello, world!")
+
+### Fenced Code Block
+
+\`\`\`python
+def hello_world():
+    print("Hello, world!")
+\`\`\`
+```
+:::
 
 ## Horizontal Rules
 
+:::tabs
+::tab{title="Rendered"}
 ---
+::tab{title="Markdown Source"}
+```markdown
+---
+```
+:::
 
 ## Links
 
+:::tabs
+::tab{title="Rendered"}
 ### Inline Links
 
 [Visit Google](https://www.google.com)
@@ -111,9 +239,28 @@ def hello_world():
 ### Autolinks
 
 <https://www.example.com>
+::tab{title="Markdown Source"}
+```markdown
+### Inline Links
+
+[Visit Google](https://www.google.com)
+
+### Reference-Style Links
+
+[Visit Google][google]
+
+[google]: https://www.google.com
+
+### Autolinks
+
+<https://www.example.com>
+```
+:::
 
 ## Images
 
+:::tabs
+::tab{title="Rendered"}
 ### Inline Image
 
 ![Alt text](https://via.placeholder.com/150)
@@ -123,21 +270,58 @@ def hello_world():
 ![Alt text][image]
 
 [image]: https://via.placeholder.com/150
+::tab{title="Markdown Source"}
+```markdown
+### Inline Image
+
+![Alt text](https://via.placeholder.com/150)
+
+### Reference-Style Image
+
+![Alt text][image]
+
+[image]: https://via.placeholder.com/150
+```
+:::
 
 ## HTML
 
+:::tabs
+::tab{title="Rendered"}
 This is <b>bold</b> and this is <i>italic</i>.
+::tab{title="Markdown Source"}
+```markdown
+This is <b>bold</b> and this is <i>italic</i>.
+```
+:::
 
 ## Strikethrough
 
+:::tabs
+::tab{title="Rendered"}
 ~~This text is strikethrough.~~
+::tab{title="Markdown Source"}
+```markdown
+~~This text is strikethrough.~~
+```
+:::
 
 ## Tables
 
+:::tabs
+::tab{title="Rendered"}
 | Column 1 | Column 2 | Column 3 |
 |----------|----------|----------|
 | Row 1    | Data     | Data     |
 | Row 2    | Data     | Data     |
+::tab{title="Markdown Source"}
+```markdown
+| Column 1 | Column 2 | Column 3 |
+|----------|----------|----------|
+| Row 1    | Data     | Data     |
+| Row 2    | Data     | Data     |
+```
+:::
 
 ## Footnotes
 
@@ -145,53 +329,137 @@ This is a footnote reference[^1].
 
 [^1]: This is the footnote text.
 
+**Markdown Source:**
+```markdown
+This is a footnote reference[^1].
+
+[ ^1]: This is the footnote text. (Do not put a space after the opening bracketh)
+```
+
 ## Definition Lists
 
+:::tabs
+::tab{title="Rendered"}
 Term  
 : Definition
+::tab{title="Markdown Source"}
+```markdown
+Term  
+: Definition
+```
+:::
 
 ## Abbreviations
 
+:::tabs
+::tab{title="Rendered"}
 The HTML abbreviation is HTML. It stands for *HyperText Markup Language*.
 
 *[HTML]: HyperText Markup Language
+::tab{title="Markdown Source"}
+```markdown
+The HTML abbreviation is HTML. It stands for *HyperText Markup Language*.
+
+*[HTML]: HyperText Markup Language
+```
+:::
 
 ## Superscript and Subscript
 
+:::tabs
+::tab{title="Rendered"}
 E = mc^2^  
 H~2~O
+::tab{title="Markdown Source"}
+```markdown
+E = mc^2^  
+H~2~O
+```
+:::
 
 ## Highlight Text
 
+:::tabs
+::tab{title="Rendered"}
 ==Highlighted text==
+::tab{title="Markdown Source"}
+```markdown
+==Highlighted text==
+```
+:::
 
 ## Insertion and Deletion
 
+:::tabs
+::tab{title="Rendered"}
 {++Inserted text++}  
 {--Deleted text--}
+::tab{title="Markdown Source"}
+```markdown
+{++Inserted text++}  
+{--Deleted text--}
+```
+:::
 
 ## Comments
 
+:::tabs
+::tab{title="Rendered"}
 <!-- This is a comment -->
+::tab{title="Markdown Source"}
+```markdown
+<!-- This is a comment -->
+```
+:::
 
 ## Emoji
 
+:::tabs
+::tab{title="Rendered"}
 :smile: :+1: :heart:
+::tab{title="Markdown Source"}
+```markdown
+:smile: :+1: :heart:
+```
+:::
 
 ## Table of Contents
 
+:::tabs
+::tab{title="Rendered"}
 [TOC]
+::tab{title="Markdown Source"}
+```markdown
+[TOC]
+```
+:::
 
 ## Heading IDs
 
+:::tabs
+::tab{title="Rendered"}
 ### Custom Heading {#custom-id}
+::tab{title="Markdown Source"}
+```markdown
+### Custom Heading {#custom-id}
+```
+:::
 
 ## Raw HTML Blocks
 
+:::tabs
+::tab{title="Rendered"}
 <div style="color: red;">This is red text.</div>
+::tab{title="Markdown Source"}
+```markdown
+<div style="color: red;">This is red text.</div>
+```
+:::
 
 ## Embedded Media
 
+:::tabs
+::tab{title="Rendered"}
 ### Video
 
 <video controls>
@@ -203,9 +471,26 @@ H~2~O
 <audio controls>
   <source src="audio.mp3" type="audio/mpeg">
 </audio>
+::tab{title="Markdown Source"}
+```markdown
+### Video
+
+<video controls>
+  <source src="movie.mp4" type="video/mp4">
+</video>
+
+### Audio
+
+<audio controls>
+  <source src="audio.mp3" type="audio/mpeg">
+</audio>
+```
+:::
 
 ## Mathematical Notation
 
+:::tabs
+::tab{title="Rendered"}
 ### Inline Math
 
 $E = mc^2$
@@ -215,6 +500,19 @@ $E = mc^2$
 $$
 \int_a^b f(x) dx = F(b) - F(a)
 $$
+::tab{title="Markdown Source"}
+```markdown
+### Inline Math
+
+$E = mc^2$
+
+### Block Math
+
+$$
+\int_a^b f(x) dx = F(b) - F(a)
+$$
+```
+:::
 
 ## Diagrams
 ````
@@ -251,84 +549,164 @@ gantt
 
 ## Smart Typography
 
+:::tabs
+::tab{title="Rendered"}
 "Curly quotes"  
 -- En-dash  
 --- Em-dash
+::tab{title="Markdown Source"}
+```markdown
+"Curly quotes"  
+-- En-dash  
+--- Em-dash
+```
+:::
 
 ## Custom Containers
 
+:::tabs
+::tab{title="Rendered"}
 > [!NOTE]
 > This is a note.
 
 > [!WARNING]
 > This is a warning.
+::tab{title="Markdown Source"}
+```markdown
+> [!NOTE]
+> This is a note.
+
+> [!WARNING]
+> This is a warning.
+```
+:::
 
 ## Collapsible Sections
 
+:::tabs
+::tab{title="Rendered"}
 <details>
 <summary>Click to expand</summary>
 
 Hidden content here.
 
 </details>
+::tab{title="Markdown Source"}
+```markdown
+<details>
+<summary>Click to expand</summary>
+
+Hidden content here.
+
+</details>
+```
+:::
 
 ## Keyboard Input
 
+:::tabs
+::tab{title="Rendered"}
 Press <kbd>Ctrl</kbd> + <kbd>C</kbd> to copy.
+::tab{title="Markdown Source"}
+```markdown
+Press <kbd>Ctrl</kbd> + <kbd>C</kbd> to copy.
+```
+:::
 
 ## Line Block
 
+:::tabs
+::tab{title="Rendered"}
 | Roses are red  
 | Violets are blue
+::tab{title="Markdown Source"}
+```markdown
+| Roses are red  
+| Violets are blue
+```
+:::
 
 ## Citation
 
+:::tabs
+::tab{title="Rendered"}
 This is a citation [@doe2025].
+::tab{title="Markdown Source"}
+```markdown
+This is a citation [@doe2025].
+```
+:::
 
 ## Page Break
 
+:::tabs
+::tab{title="Rendered"}
 \pagebreak
+::tab{title="Markdown Source"}
+```markdown
+\pagebreak
+```
+:::
 
 ## Escaping Characters
 
+:::tabs
+::tab{title="Rendered"}
 \*Not italicized\*
+::tab{title="Markdown Source"}
+```markdown
+\*Not italicized\*
+```
+:::
 
 ## Tabbed Content
 
 You can create tabbed sections to show multiple versions of content, like code in different languages or rendered output vs source code.
 
+**Syntax:**
+
+To create tabs, use the following markdown syntax:
+
+    :::tabs
+    ::tab{title="Python"}
+    ```python
+    def greet(name):
+        return f"Hello, {name}!"
+    print(greet("World"))
+    ```
+    ::tab{title="JavaScript"}
+    ```javascript
+    function greet(name) {
+        return `Hello, ${name}!`;
+    }
+    console.log(greet("World"));
+    ```
+    ::tab{title="Output"}
+    ```
+    Hello, World!
+    ```
+    :::
+
+**Example:**
+
 :::tabs
-::tab{title="Rendered"}
-This is the **rendered output** with _markdown formatting_.
-
-- List item 1
-- List item 2
-- List item 3
-
+::tab{title="Python"}
 ```python
-print("Hello, World!")
-```
-::tab{title="Markdown Source"}
-```markdown
-This is the **rendered output** with _markdown formatting_.
+def greet(name):
+    return f"Hello, {name}!"
 
-- List item 1
-- List item 2
-- List item 3
-
-\`\`\`python
-print("Hello, World!")
-\`\`\`
+print(greet("World"))
 ```
-::tab{title="HTML"}
-```html
-<div>
-  <p>This is the <strong>rendered output</strong> with <em>markdown formatting</em>.</p>
-  <ul>
-    <li>List item 1</li>
-    <li>List item 2</li>
-    <li>List item 3</li>
-  </ul>
-</div>
+::tab{title="JavaScript"}
+```javascript
+function greet(name) {
+    return `Hello, ${name}!`;
+}
+
+console.log(greet("World"));
+```
+::tab{title="Output"}
+```
+Hello, World!
 ```
 :::
