@@ -205,9 +205,9 @@ def layout(*content, htmx, title=None, show_sidebar=False):
                    cls="w-full max-w-2xl mx-auto px-6 mt-auto mb-6")
         )
     
-    # For HTMX requests, return just the body content with title update
+    # For HTMX requests, return only the content (partial hydration)
     if htmx and htmx.request:
-        return Title(title), body_content
+        return Title(title), *content
     
     # For full page loads, return complete page
     return Title(title), body_content
@@ -234,7 +234,7 @@ def build_post_tree(folder):
             title = slug_to_title(item.stem)
             items.append(Li(A(Div(Span(cls="w-4 mr-1"), Span(UkIcon("file-text", cls="text-slate-400"), cls="w-5 flex justify-center mr-2"),
                 title, cls="flex items-center"), href=f'/posts/{slug}',
-                hx_get=f'/posts/{slug}', hx_target="#page-container", hx_push_url="true", hx_swap="innerHTML show:window:top",
+                hx_get=f'/posts/{slug}', hx_target="#main-content", hx_push_url="true", hx_swap="innerHTML show:window:top",
                 cls="block py-1 px-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors")))
     return items
 
