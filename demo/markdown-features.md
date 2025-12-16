@@ -109,12 +109,10 @@ ___Bold and Italics___ using triple underscores.
 :::tabs
 ::tab{title="Rendered"}
 > This is a blockquote.
->
 > > Nested blockquote.
 ::tab{title="Markdown Source"}
 ```markdown
 > This is a blockquote.
->
 > > Nested blockquote.
 ```
 :::

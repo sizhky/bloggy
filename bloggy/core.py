@@ -100,6 +100,15 @@ class InlineCodeAttr(mst.span_token.SpanToken):
         self.attrs = match.group(2)
         self.children = []
 
+# Strikethrough: ~~text~~
+class Strikethrough(mst.span_token.SpanToken):
+    pattern = re.compile(r'~~(.+?)~~')
+    parse_inner = True
+    parse_group = 1
+    precedence = 7
+    def __init__(self, match):
+        self.children = []
+
 def preprocess_super_sub(content):
     """Convert superscript and subscript syntax to HTML before markdown rendering"""
     # Handle superscript ^text^
@@ -158,6 +167,36 @@ class ContentRenderer(FrankenRenderer):
         self.footnotes, self.fn_counter = footnotes or {}, 0
         self.current_path = current_path  # Current post path for resolving relative links and images
     
+    def render_list_item(self, token):
+        """Render list items with task list checkbox support"""
+        inner = self.render_inner(token)
+        
+        # Check if this is a task list item: starts with [ ] or [x]
+        # Try different patterns as the structure might vary
+        task_pattern = re.match(r'^\s*\[([ xX])\]\s*(.*?)$', inner, re.DOTALL)
+        if not task_pattern:
+            task_pattern = re.match(r'^<p>\s*\[([ xX])\]\s*(.*?)</p>$', inner, re.DOTALL)
+        
+        if task_pattern:
+            checked = task_pattern.group(1).lower() == 'x'
+            content = task_pattern.group(2).strip()
+            
+            # Custom styled checkbox
+            if checked:
+                checkbox_style = 'background-color: #10b981; border-color: #10b981;'
+                checkmark = '<svg class="w-full h-full text-white" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3,8 6,11 13,4"></polyline></svg>'
+            else:
+                checkbox_style = 'background-color: #6b7280; border-color: #6b7280;'
+                checkmark = ''
+            
+            checkbox = f'''<span class="inline-flex items-center justify-center mr-3 mt-0.5" style="width: 20px; height: 20px; border-radius: 6px; border: 2px solid; {checkbox_style} flex-shrink: 0;">
+                {checkmark}
+            </span>'''
+            
+            return f'<li class="task-list-item flex items-start" style="list-style: none; margin: 0.5rem 0;">{checkbox}<span class="flex-1">{content}</span></li>\n'
+        
+        return f'<li>{inner}</li>\n'
+    
     def render_footnote_ref(self, token):
         self.fn_counter += 1
         n, target = self.fn_counter, token.target
@@ -185,6 +224,11 @@ class ContentRenderer(FrankenRenderer):
     def render_subscript(self, token):
         """Render subscript text"""
         return f'<sub>{token.content}</sub>'
+    
+    def render_strikethrough(self, token):
+        """Render strikethrough text"""
+        inner = self.render_inner(token)
+        return f'<del>{inner}</del>'
     
     def render_inline_code_attr(self, token):
         """Render inline code with Pandoc-style attributes"""
@@ -279,11 +323,13 @@ class ContentRenderer(FrankenRenderer):
                 <div id="{diagram_id}" class="mermaid-wrapper p-4 overflow-hidden flex justify-center items-center" style="min-height: {min_height}; height: {height};" data-mermaid-code="{escaped_code}"><pre class="mermaid" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">{code}</pre></div>
             </div>'''
         
-        # For all other languages, properly escape HTML/XML characters
+        # For other languages: escape HTML/XML for display, but NOT for markdown 
+        # (markdown code blocks should show raw source)
         import html
-        escaped_code = html.escape(code)
+        if lang and lang.lower() != 'markdown':
+            code = html.escape(code)
         lang_class = f' class="language-{lang}"' if lang else ''
-        return f'<pre><code{lang_class}>{escaped_code}</code></pre>'
+        return f'<pre><code{lang_class}>{code}</code></pre>'
     
     def render_link(self, token):
         href, inner, title = token.target, self.render_inner(token), f' title="{token.title}"' if token.title else ''
@@ -347,7 +393,7 @@ def postprocess_tabs(html, tab_data_store, img_dir, current_path, footnotes):
         for i, (_, tab_content) in enumerate(tabs):
             active = 'active' if i == 0 else ''
             # Render each tab's content as fresh markdown
-            with ContentRenderer(InlineCodeAttr, FootnoteRef, Superscript, Subscript, img_dir=img_dir, footnotes=footnotes, current_path=current_path) as renderer:
+            with ContentRenderer(InlineCodeAttr, Strikethrough, FootnoteRef, Superscript, Subscript, img_dir=img_dir, footnotes=footnotes, current_path=current_path) as renderer:
                 doc = mst.Document(tab_content)
                 rendered = renderer.render(doc)
             html_parts.append(f'<div class="tab-panel {active}" data-tab-index="{i}">{rendered}</div>')
@@ -382,7 +428,7 @@ def from_md(content, img_dir=None, current_path=None):
             'h3': 'text-xl font-semibold mb-3 mt-5', 'h4': 'text-lg font-semibold mb-2 mt-4'}
     
     # Register custom tokens with renderer context manager
-    with ContentRenderer(InlineCodeAttr, FootnoteRef, Superscript, Subscript, img_dir=img_dir, footnotes=footnotes, current_path=current_path) as renderer:
+    with ContentRenderer(InlineCodeAttr, Strikethrough, FootnoteRef, Superscript, Subscript, img_dir=img_dir, footnotes=footnotes, current_path=current_path) as renderer:
         doc = mst.Document(content)
         html = renderer.render(doc)
     
@@ -664,6 +710,11 @@ def collapsible_sidebar(icon, title, items_list, is_open=True):
         open=is_open
     )
 
+def is_active_toc_item(anchor):
+    """Check if a TOC item is currently active based on URL hash"""
+    # This will be enhanced client-side with JavaScript
+    return False
+
 def extract_toc(content):
     """Extract table of contents from markdown content, excluding code blocks"""
     # Remove code blocks (both fenced and indented) to avoid false positives
@@ -683,7 +734,7 @@ def extract_toc(content):
     return headings
 
 def build_toc_items(headings):
-    """Build TOC items from extracted headings"""
+    """Build TOC items from extracted headings with active state tracking"""
     if not headings:
         return [Li("No headings found", cls="text-sm text-slate-500 dark:text-slate-400 py-1")]
     
@@ -692,7 +743,8 @@ def build_toc_items(headings):
         indent = "ml-0" if level == 1 else f"ml-{(level-1)*3}"
         items.append(Li(
             A(text, href=f"#{anchor}", 
-              cls=f"block py-1 px-2 text-sm rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors {indent}"),
+              cls=f"toc-link block py-1 px-2 text-sm rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors {indent}",
+              data_anchor=anchor),
             cls="my-1"
         ))
     return items
@@ -769,7 +821,7 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
         
         # Full layout with all sidebars
         content_with_sidebars = Div(cls="w-full max-w-7xl mx-auto px-4 flex gap-6 flex-1")(
-            # Left sidebar - collapsible post list (stays static)
+            # Left sidebar - collapsible post list (stays static, JS updates active state)
             Aside(
                 collapsible_sidebar("menu", "Posts", get_posts(), is_open=True),
                 cls="hidden md:block w-64 shrink-0 sticky top-24 self-start max-h-[calc(100vh-10rem)] overflow-hidden z-[1000]",
@@ -817,7 +869,6 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
     result.extend(custom_css_links)
     result.append(body_content)
     return tuple(result)
-
 def build_post_tree(folder):
     root = get_root_folder()
     items = []
@@ -852,7 +903,8 @@ def build_post_tree(folder):
                 Span(title),
                 href=f'/posts/{slug}',
                 hx_get=f'/posts/{slug}', hx_target="#main-content", hx_push_url="true", hx_swap="outerHTML show:window:top settle:0.1s",
-                cls="flex items-center py-1 px-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors")))
+                cls="post-link flex items-center py-1 px-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors",
+                data_path=slug)))
     return items
 
 def get_posts(): return build_post_tree(get_root_folder())

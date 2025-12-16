@@ -1,3 +1,6 @@
+---
+title: Bloggy - A FastHTML Blogging Platform
+---
 # Bloggy
 
 A lightweight, elegant blogging platform built with FastHTML that renders Markdown files into beautiful web pages with advanced features.

@@ -179,11 +179,63 @@ mermaid.run().then(() => {
     setTimeout(initMermaidInteraction, 100);
 });
 
+// Update active post link in sidebar
+function updateActivePostLink() {
+    const currentPath = window.location.pathname.replace(/^\/posts\//, '');
+    document.querySelectorAll('.post-link').forEach(link => {
+        const linkPath = link.getAttribute('data-path');
+        if (linkPath === currentPath) {
+            link.classList.add('bg-blue-50', 'dark:bg-blue-900/20', 'text-blue-600', 'dark:text-blue-400', 'font-medium');
+            link.classList.remove('text-slate-700', 'dark:text-slate-300', 'hover:text-blue-600');
+        } else {
+            link.classList.remove('bg-blue-50', 'dark:bg-blue-900/20', 'text-blue-600', 'dark:text-blue-400', 'font-medium');
+            link.classList.add('text-slate-700', 'dark:text-slate-300', 'hover:text-blue-600');
+        }
+    });
+}
+
+// Update active TOC link based on scroll position
+function updateActiveTocLink() {
+    const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]');
+    const tocLinks = document.querySelectorAll('.toc-link');
+    
+    let activeHeading = null;
+    headings.forEach(heading => {
+        const rect = heading.getBoundingClientRect();
+        if (rect.top <= 100) {
+            activeHeading = heading;
+        }
+    });
+    
+    tocLinks.forEach(link => {
+        const anchor = link.getAttribute('data-anchor');
+        if (activeHeading && anchor === activeHeading.id) {
+            link.classList.add('bg-blue-50', 'dark:bg-blue-900/20', 'text-blue-600', 'dark:text-blue-400', 'font-semibold');
+        } else {
+            link.classList.remove('bg-blue-50', 'dark:bg-blue-900/20', 'text-blue-600', 'dark:text-blue-400', 'font-semibold');
+        }
+    });
+}
+
+// Listen for scroll events to update active TOC link
+let ticking = false;
+window.addEventListener('scroll', () => {
+    if (!ticking) {
+        window.requestAnimationFrame(() => {
+            updateActiveTocLink();
+            ticking = false;
+        });
+        ticking = true;
+    }
+});
+
 // Re-run mermaid on HTMX content swaps
 document.body.addEventListener('htmx:afterSwap', function() {
     mermaid.run().then(() => {
         setTimeout(initMermaidInteraction, 100);
     });
+    updateActivePostLink();
+    updateActiveTocLink();
 });
 
 // Watch for theme changes and re-render mermaid diagrams
@@ -198,4 +250,10 @@ const observer = new MutationObserver((mutations) => {
 observer.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ['class']
+});
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    updateActivePostLink();
+    updateActiveTocLink();
 });
