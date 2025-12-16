@@ -57,14 +57,44 @@ except NameError:
                 src = f'{pathlib.Path(self.img_dir)}/{src}'
             return tpl.format(src, token.children[0].content if token.children else '', title)
 
-def span_token(name, pat, attr, prec=5):
+def span_token(name, pat, attr, prec=5, parse_inner=False):
     class T(mst.span_token.SpanToken):
-        precedence,parse_inner,parse_group,pattern = prec,False,1,re.compile(pat)
-        def __init__(self, match): setattr(self, attr, match.group(1))
+        precedence,parse_group,pattern = prec,1,re.compile(pat)
+        def __init__(self, match): 
+            setattr(self, attr, match.group(1))
+            self.children = ()
     T.__name__ = name
+    T.parse_inner = parse_inner
     return T
 
 FootnoteRef = span_token('FootnoteRef', r'\[\^([^\]]+)\](?!:)', 'target')
+
+# Superscript and Subscript tokens with higher precedence
+class Superscript(mst.span_token.SpanToken):
+    pattern = re.compile(r'\^([^\^]+?)\^')
+    parse_inner = False
+    parse_group = 1
+    precedence = 7
+    def __init__(self, match):
+        self.content = match.group(1)
+        self.children = []
+
+class Subscript(mst.span_token.SpanToken):
+    pattern = re.compile(r'~([^~]+?)~')
+    parse_inner = False
+    parse_group = 1
+    precedence = 7
+    def __init__(self, match):
+        self.content = match.group(1)
+        self.children = []
+
+def preprocess_super_sub(content):
+    """Convert superscript and subscript syntax to HTML before markdown rendering"""
+    # Handle superscript ^text^
+    content = re.sub(r'\^([^\^\n]+?)\^', r'<sup>\1</sup>', content)
+    # Handle subscript ~text~ (but not strikethrough ~~text~~)
+    content = re.sub(r'(?<!~)~([^~\n]+?)~(?!~)', r'<sub>\1</sub>', content)
+    return content
 
 def extract_footnotes(content):
     pat = re.compile(r'^\[\^([^\]]+)\]:\s*(.+?)(?=(?:^|\n)\[\^|\n\n|\Z)', re.MULTILINE | re.DOTALL)
@@ -144,6 +174,14 @@ class ContentRenderer(FrankenRenderer):
         inner = self.render_inner(token)
         anchor = text_to_anchor(inner)
         return f'<h{level} id="{anchor}">{inner}</h{level}>'
+    
+    def render_superscript(self, token):
+        """Render superscript text"""
+        return f'<sup>{token.content}</sup>'
+    
+    def render_subscript(self, token):
+        """Render subscript text"""
+        return f'<sub>{token.content}</sub>'
 
     def render_block_code(self, token):
         lang = getattr(token, 'language', '')
@@ -215,12 +253,13 @@ class ContentRenderer(FrankenRenderer):
 
 def from_md(content, img_dir='/static/images'):
     content, footnotes = extract_footnotes(content)
+    content = preprocess_super_sub(content)  # Preprocess superscript/subscript
     content = preprocess_tabs(content)  # Preprocess tabs before markdown rendering
     mods = {'pre': 'my-4', 'p': 'text-base leading-relaxed mb-6', 'li': 'text-base leading-relaxed',
             'ul': 'uk-list uk-list-bullet space-y-2 mb-6 ml-6 text-base', 'ol': 'uk-list uk-list-decimal space-y-2 mb-6 ml-6 text-base', 
             'hr': 'border-t border-border my-8', 'h1': 'text-3xl font-bold mb-6 mt-8', 'h2': 'text-2xl font-semibold mb-4 mt-6', 
             'h3': 'text-xl font-semibold mb-3 mt-5', 'h4': 'text-lg font-semibold mb-2 mt-4'}
-    html = mst.markdown(content, partial(ContentRenderer, FootnoteRef, img_dir=img_dir, footnotes=footnotes))
+    html = mst.markdown(content, partial(ContentRenderer, FootnoteRef, Superscript, Subscript, img_dir=img_dir, footnotes=footnotes))
     return Div(Link(rel="stylesheet", href="/static/sidenote.css"), NotStr(apply_classes(html, class_map_mods=mods)), cls="w-full")
 
 # App configuration
@@ -398,14 +437,14 @@ hdrs = (
         }
         
         .tab-button.active { 
-            color: rgb(59 130 246); 
-            border-bottom-color: rgb(59 130 246); 
+            color: rgb(15 23 42); 
+            border-bottom-color: rgb(15 23 42); 
             background: white;
             font-weight: 600;
         }
         .dark .tab-button.active { 
-            color: rgb(96 165 250); 
-            border-bottom-color: rgb(96 165 250); 
+            color: rgb(248 250 252); 
+            border-bottom-color: rgb(248 250 252); 
             background: rgb(2 6 23);
         }
         
@@ -418,7 +457,7 @@ hdrs = (
         }
         
         .tab-panel { 
-            padding: 2rem;
+            padding: 1rem 1rem;
             animation: fadeIn 0.2s ease-in;
             position: absolute;
             top: 0;
