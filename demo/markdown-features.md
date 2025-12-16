@@ -1,4 +1,6 @@
-# Markdown Features Demonstration
+---
+title: A Small Demonstration of All The Markdown Features That Are Under The Sun, Without Worrying About If They Are Supported Or Not
+---
 
 ## Headings
 

@@ -306,6 +306,31 @@ hdrs = (
         });
     """),
     Script(src="/static/scripts.js", type='module'),
+    Link(rel="stylesheet", href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"),
+    Script(src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"),
+    Script(src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"),
+    Script("""
+        document.addEventListener('DOMContentLoaded', function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ],
+                throwOnError: false
+            });
+        });
+        
+        // Re-render math after HTMX swaps
+        document.body.addEventListener('htmx:afterSwap', function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ],
+                throwOnError: false
+            });
+        });
+    """),
     Link(rel="preconnect", href="https://fonts.googleapis.com"), 
     Link(rel="preconnect", href="https://fonts.gstatic.com", crossorigin=""),
     Link(rel="stylesheet", href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono&display=swap"),
@@ -570,9 +595,11 @@ def build_post_tree(folder):
             if sub_items:
                 folder_title = slug_to_title(item.name)
                 items.append(Li(Details(
-                    Summary(UkIcon("chevron-right", cls="folder-chevron w-4 h-4 mr-1 text-slate-400"),
-                           Span(UkIcon("folder", cls="text-blue-500"), cls="w-5 flex justify-center mr-2"),
-                           folder_title, cls="flex items-center font-medium cursor-pointer py-1 px-2 hover:text-blue-600 select-none list-none rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"),
+                    Summary(
+                        Span(UkIcon("chevron-right", cls="folder-chevron w-4 h-4 text-slate-400"), cls="w-4 mr-2 flex items-center justify-center shrink-0"),
+                        Span(UkIcon("folder", cls="text-blue-500 w-4 h-4"), cls="w-4 mr-2 flex items-center justify-center shrink-0"),
+                        Span(folder_title),
+                        cls="flex items-center font-medium cursor-pointer py-1 px-2 hover:text-blue-600 select-none list-none rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"),
                     Ul(*sub_items, cls="ml-6 pl-2 space-y-1 border-l border-slate-100 dark:border-slate-800"), open=False), cls="my-1"))
         elif item.suffix == '.md':
             # Skip the file being used for home page (index.md takes precedence over readme.md)
@@ -583,10 +610,13 @@ def build_post_tree(folder):
             
             slug = str(item.relative_to(root).with_suffix(''))
             title = get_post_title(item)
-            items.append(Li(A(Div(Span(cls="w-4 mr-1"), Span(UkIcon("file-text", cls="text-slate-400"), cls="w-5 flex justify-center mr-2"),
-                title, cls="flex items-center"), href=f'/posts/{slug}',
+            items.append(Li(A(
+                Span(cls="w-4 mr-2 shrink-0"),
+                Span(UkIcon("file-text", cls="text-slate-400 w-4 h-4"), cls="w-4 mr-2 flex items-center justify-center shrink-0"),
+                Span(title),
+                href=f'/posts/{slug}',
                 hx_get=f'/posts/{slug}', hx_target="#main-content", hx_push_url="true", hx_swap="outerHTML show:window:top settle:0.1s",
-                cls="block py-1 px-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors")))
+                cls="flex items-center py-1 px-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors")))
     return items
 
 def get_posts(): return build_post_tree(get_root_folder())
