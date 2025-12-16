@@ -50,11 +50,12 @@ except NameError:
             super().__init__(*args, **kwargs)
             self.img_dir = img_dir
         def render_image(self, token):
-            tpl = '<img src="{}" alt="{}"{} class="max-w-full h-auto rounded-lg mb-6">'
+            tpl = '<img src="{}" alt="{}"{}  class="max-w-full h-auto rounded-lg mb-6">'
             title = f' title="{token.title}"' if hasattr(token, 'title') else ''
             src = token.src
+            # Only prepend img_dir if src is relative and img_dir is provided
             if self.img_dir and not src.startswith(('http://', 'https://', '/', 'attachment:', 'blob:', 'data:')):
-                src = f'{pathlib.Path(self.img_dir)}/{src}'
+                src = f'{self.img_dir}/{src}'
             return tpl.format(src, token.children[0].content if token.children else '', title)
 
 def span_token(name, pat, attr, prec=5, parse_inner=False):
@@ -103,8 +104,12 @@ def extract_footnotes(content):
     return content.strip(), defs
 
 def preprocess_tabs(content):
-    """Convert :::tabs syntax to HTML tabs before markdown rendering"""
+    """Convert :::tabs syntax to placeholder tokens, store tab data for later processing"""
     import hashlib
+    import base64
+    
+    # Storage for tab data (will be processed after main markdown rendering)
+    tab_data_store = {}
     
     # Pattern to match :::tabs...:::
     tabs_pattern = re.compile(r'^:::tabs\s*\n(.*?)^:::', re.MULTILINE | re.DOTALL)
@@ -117,8 +122,8 @@ def preprocess_tabs(content):
         tabs = []
         for tab_match in tab_pattern.finditer(tabs_content):
             title = tab_match.group(1)
-            content = tab_match.group(2).strip()
-            tabs.append((title, content))
+            tab_content = tab_match.group(2).strip()
+            tabs.append((title, tab_content))
         
         if not tabs:
             return match.group(0)  # Return original if no tabs found
@@ -126,40 +131,27 @@ def preprocess_tabs(content):
         # Generate unique ID for this tab group
         tab_id = hashlib.md5(match.group(0).encode()).hexdigest()[:8]
         
-        # Build HTML for tabs
-        html_parts = [f'<div class="tabs-container" data-tabs-id="{tab_id}">']
+        # Store tab data for later processing
+        tab_data_store[tab_id] = tabs
         
-        # Tab buttons
-        html_parts.append('<div class="tabs-header">')
-        for i, (title, _) in enumerate(tabs):
-            active = 'active' if i == 0 else ''
-            html_parts.append(f'<button class="tab-button {active}" onclick="switchTab(\'{tab_id}\', {i})">{title}</button>')
-        html_parts.append('</div>')
-        
-        # Tab content panels
-        html_parts.append('<div class="tabs-content">')
-        for i, (_, content) in enumerate(tabs):
-            active = 'active' if i == 0 else ''
-            # Render the content as markdown
-            rendered = mst.markdown(content, FrankenRenderer)
-            html_parts.append(f'<div class="tab-panel {active}" data-tab-index="{i}">{rendered}</div>')
-        html_parts.append('</div>')
-        
-        html_parts.append('</div>')
-        return '\n'.join(html_parts)
+        # Return a placeholder that won't be processed by markdown
+        placeholder = f'<div class="tab-placeholder" data-tab-id="{tab_id}"></div>'
+        return placeholder
     
-    return tabs_pattern.sub(replace_tabs_block, content)
+    processed_content = tabs_pattern.sub(replace_tabs_block, content)
+    return processed_content, tab_data_store
 
 class ContentRenderer(FrankenRenderer):
-    def __init__(self, *extras, img_dir=None, footnotes=None, **kwargs):
+    def __init__(self, *extras, img_dir=None, footnotes=None, current_path=None, **kwargs):
         super().__init__(*extras, img_dir=img_dir, **kwargs)
         self.footnotes, self.fn_counter = footnotes or {}, 0
+        self.current_path = current_path  # Current post path for resolving relative links and images
     
     def render_footnote_ref(self, token):
         self.fn_counter += 1
         n, target = self.fn_counter, token.target
         content = self.footnotes.get(target, f"[Missing footnote: {target}]")
-        rendered = mst.markdown(content, partial(ContentRenderer, img_dir=self.img_dir)).strip()
+        rendered = mst.markdown(content, partial(ContentRenderer, img_dir=self.img_dir, current_path=self.current_path)).strip()
         if rendered.startswith('<p>') and rendered.endswith('</p>'): rendered = rendered[3:-4]
         style = "text-sm leading-relaxed border-l-2 border-amber-400 dark:border-blue-400 pl-3 text-neutral-500 dark:text-neutral-400 transition-all duration-500 w-full my-2 xl:my-0"
         toggle = f"on click if window.innerWidth >= 1280 then add .hl to #sn-{n} then wait 1s then remove .hl from #sn-{n} else toggle .open on me then toggle .show on #sn-{n}"
@@ -241,25 +233,112 @@ class ContentRenderer(FrankenRenderer):
                 </div>
                 <div id="{diagram_id}" class="mermaid-wrapper p-4 overflow-hidden flex justify-center items-center" style="min-height: {min_height}; height: {height};" data-mermaid-code="{escaped_code}"><pre class="mermaid" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">{code}</pre></div>
             </div>'''
-        return super().render_block_code(token)
+        
+        # For all other languages, properly escape HTML/XML characters
+        import html
+        escaped_code = html.escape(code)
+        lang_class = f' class="language-{lang}"' if lang else ''
+        return f'<pre><code{lang_class}>{escaped_code}</code></pre>'
     
     def render_link(self, token):
         href, inner, title = token.target, self.render_inner(token), f' title="{token.title}"' if token.title else ''
-        is_internal = href.startswith('/') and not href.startswith('//') and '.' not in href.split('/')[-1]
+        
+        # Check if it's an external link (http://, https://, mailto:, etc.)
+        is_external = href.startswith(('http://', 'https://', 'mailto:', 'tel:', '//', '#'))
+        
+        # Check if it's an absolute internal link starting with /
+        is_absolute_internal = href.startswith('/') and not href.startswith('//')
+        
+        # Handle relative links (e.g., ./file.md, ../other/file.md, file.md)
+        is_relative = not is_external and not is_absolute_internal
+        
+        if is_relative and self.current_path:
+            # Resolve relative link based on current post path
+            from pathlib import Path
+            current_dir = Path(self.current_path).parent
+            
+            # Remove .md extension if present
+            if href.endswith('.md'):
+                href = href[:-3]
+            
+            # Resolve the relative path
+            resolved = (current_dir / href).resolve()
+            root = get_root_folder().resolve()
+            
+            try:
+                # Get relative path from root
+                rel_path = resolved.relative_to(root)
+                href = f'/posts/{rel_path}'
+                is_absolute_internal = True
+            except ValueError:
+                # Path is outside root folder, treat as external
+                is_external = True
+        
+        # Determine if this should have HTMX attributes (internal links without file extensions)
+        is_internal = is_absolute_internal and '.' not in href.split('/')[-1]
+        
         hx = f' hx-get="{href}" hx-target="#main-content" hx-push-url="true" hx-swap="innerHTML show:window:top"' if is_internal else ''
-        ext = '' if is_internal else ' target="_blank" rel="noopener noreferrer"'
+        ext = '' if (is_internal or is_absolute_internal) else ' target="_blank" rel="noopener noreferrer"'
         return f'<a href="{href}"{hx}{ext} class="text-primary underline"{title}>{inner}</a>'
 
 
-def from_md(content, img_dir='/static/images'):
+def postprocess_tabs(html, tab_data_store, img_dir, current_path, footnotes):
+    """Replace tab placeholders with fully rendered tab HTML"""
+    import hashlib
+    
+    for tab_id, tabs in tab_data_store.items():
+        # Build HTML for this tab group
+        html_parts = [f'<div class="tabs-container" data-tabs-id="{tab_id}">']
+        
+        # Tab buttons
+        html_parts.append('<div class="tabs-header">')
+        for i, (title, _) in enumerate(tabs):
+            active = 'active' if i == 0 else ''
+            html_parts.append(f'<button class="tab-button {active}" onclick="switchTab(\'{tab_id}\', {i})">{title}</button>')
+        html_parts.append('</div>')
+        
+        # Tab content panels
+        html_parts.append('<div class="tabs-content">')
+        for i, (_, tab_content) in enumerate(tabs):
+            active = 'active' if i == 0 else ''
+            # Render each tab's content as fresh markdown
+            rendered = mst.markdown(tab_content, partial(ContentRenderer, FootnoteRef, Superscript, Subscript, img_dir=img_dir, footnotes=footnotes, current_path=current_path))
+            html_parts.append(f'<div class="tab-panel {active}" data-tab-index="{i}">{rendered}</div>')
+        html_parts.append('</div>')
+        
+        html_parts.append('</div>')
+        tab_html = '\n'.join(html_parts)
+        
+        # Replace placeholder with rendered tab HTML
+        placeholder = f'<div class="tab-placeholder" data-tab-id="{tab_id}"></div>'
+        html = html.replace(placeholder, tab_html)
+    
+    return html
+
+def from_md(content, img_dir=None, current_path=None):
+    # Resolve img_dir from current_path if not explicitly provided
+    if img_dir is None and current_path:
+        # Convert current_path to URL path for images (e.g., demo/flat-land/chapter-01 -> /posts/demo/flat-land)
+        from pathlib import Path
+        path_parts = Path(current_path).parts
+        if len(path_parts) > 1:
+            img_dir = '/posts/' + '/'.join(path_parts[:-1])
+        else:
+            img_dir = '/posts'
+    
     content, footnotes = extract_footnotes(content)
     content = preprocess_super_sub(content)  # Preprocess superscript/subscript
-    content = preprocess_tabs(content)  # Preprocess tabs before markdown rendering
+    content, tab_data_store = preprocess_tabs(content)  # Preprocess tabs and get tab data
     mods = {'pre': 'my-4', 'p': 'text-base leading-relaxed mb-6', 'li': 'text-base leading-relaxed',
             'ul': 'uk-list uk-list-bullet space-y-2 mb-6 ml-6 text-base', 'ol': 'uk-list uk-list-decimal space-y-2 mb-6 ml-6 text-base', 
             'hr': 'border-t border-border my-8', 'h1': 'text-3xl font-bold mb-6 mt-8', 'h2': 'text-2xl font-semibold mb-4 mt-6', 
             'h3': 'text-xl font-semibold mb-3 mt-5', 'h4': 'text-lg font-semibold mb-2 mt-4'}
-    html = mst.markdown(content, partial(ContentRenderer, FootnoteRef, Superscript, Subscript, img_dir=img_dir, footnotes=footnotes))
+    html = mst.markdown(content, partial(ContentRenderer, FootnoteRef, Superscript, Subscript, img_dir=img_dir, footnotes=footnotes, current_path=current_path))
+    
+    # Post-process: replace tab placeholders with rendered tabs
+    if tab_data_store:
+        html = postprocess_tabs(html, tab_data_store, img_dir, current_path, footnotes)
+    
     return Div(Link(rel="stylesheet", href="/static/sidenote.css"), NotStr(apply_classes(html, class_map_mods=mods)), cls="w-full")
 
 # App configuration
@@ -499,6 +578,15 @@ static_dir = Path(__file__).parent / "static"
 if static_dir.exists(): app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 rt = app.route
 
+# Route to serve static files (images, SVGs, etc.) from blog posts
+@rt("/posts/{path:path}.{ext:static}")
+def serve_post_static(path: str, ext: str):
+    from starlette.responses import FileResponse
+    file_path = get_root_folder() / f'{path}.{ext}'
+    if file_path.exists():
+        return FileResponse(file_path)
+    return Response(status_code=404)
+
 def theme_toggle():
     theme_script = """on load set franken to (localStorage's __FRANKEN__ or '{}') as Object
                 if franken's mode is 'dark' then add .dark to <html/> end
@@ -668,8 +756,8 @@ def post_detail(path: str, htmx):
     # Get title from frontmatter or filename
     post_title = metadata.get('title', slug_to_title(path.split('/')[-1]))
     
-    # Render the markdown content
-    content = from_md(raw_content)
+    # Render the markdown content with current path for relative link resolution
+    content = from_md(raw_content, current_path=path)
     post_content = Div(H1(post_title, cls="text-4xl font-bold mb-8"), content)
     
     # Always return complete layout with sidebar and TOC
@@ -703,7 +791,9 @@ def index(htmx):
         # Render the index/readme file
         metadata, raw_content = parse_frontmatter(index_file)
         page_title = metadata.get('title', blog_title)
-        content = from_md(raw_content)
+        # Use index file's relative path from root for link resolution
+        index_path = str(index_file.relative_to(get_root_folder()).with_suffix(''))
+        content = from_md(raw_content, current_path=index_path)
         page_content = Div(H1(page_title, cls="text-4xl font-bold mb-8"), content)
         return layout(page_content, htmx=htmx, title=f"{page_title} - {blog_title}", 
                       show_sidebar=True, toc_content=raw_content)

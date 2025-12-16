@@ -192,7 +192,7 @@ def hello_world():
     print("Hello, world!")
 ```
 ::tab{title="Markdown Source"}
-```markdown
+````markdown
 ### Inline Code
 
 Use `inline code` for short snippets.
@@ -204,11 +204,11 @@ Use `inline code` for short snippets.
 
 ### Fenced Code Block
 
-\`\`\`python
+```python
 def hello_world():
     print("Hello, world!")
-\`\`\`
 ```
+````
 :::
 
 ## Horizontal Rules
@@ -239,6 +239,13 @@ def hello_world():
 ### Autolinks
 
 <https://www.example.com>
+
+### Relative Links
+[Lorem Ipsum](lorem-ipsum)
+
+[Home](/)
+
+[Static Build (Outer Link)](../static-build)
 ::tab{title="Markdown Source"}
 ```markdown
 ### Inline Links
@@ -254,6 +261,13 @@ def hello_world():
 ### Autolinks
 
 <https://www.example.com>
+
+### Relative Links
+[Getting Started](getting-started)
+
+[Home](/)
+
+[Static Build (Outer Link)](../static-build)
 ```
 :::
 
@@ -263,24 +277,24 @@ def hello_world():
 ::tab{title="Rendered"}
 ### Inline Image
 
-![Alt text](https://via.placeholder.com/150)
+![A cute cat](https://cataas.com/cat?width=300&height=300)
 
 ### Reference-Style Image
 
-![Alt text][image]
+![Another cute cat][image]
 
-[image]: https://via.placeholder.com/150
+[image]: https://cataas.com/cat/cute?width=300&height=300
 ::tab{title="Markdown Source"}
 ```markdown
 ### Inline Image
 
-![Alt text](https://via.placeholder.com/150)
+![A cute cat](https://cataas.com/cat?width=300&height=300)
 
 ### Reference-Style Image
 
-![Alt text][image]
+![Another cute cat][image]
 
-[image]: https://via.placeholder.com/150
+[image]: https://cataas.com/cat/cute?width=300&height=300
 ```
 :::
 

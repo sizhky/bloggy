@@ -137,37 +137,50 @@ width: 80vw
 ---
 flowchart LR
     A[Raw Markdown] --> B{Extract Footnotes}
-    B -->|Content| C[Mistletoe Parser]
+    B -->|Content| C[Preprocess Super/Sub]
     B -->|Footnote Defs| D[Store in Dict]
     
-    C --> E[Token Stream]
+    C --> E[Preprocess Tabs]
+    E -->|Content + Placeholders| F[Mistletoe Parser]
+    E -->|Tab Data| G[Tab Store]
     
-    E --> F{ContentRenderer}
+    F --> H[Token Stream]
     
-    F -->|BlockCode + 'mermaid'| G[Mermaid Renderer]
-    F -->|Link| H[Link Renderer]
-    F -->|FootnoteRef| I[Footnote Renderer]
-    F -->|Other| J[Standard HTML]
+    H --> I{ContentRenderer}
     
-    G --> K[Diagram with Controls]
-    H --> L{Internal Link?}
-    L -->|Yes| M[Add HTMX attrs]
-    L -->|No| N[Add target=_blank]
+    I -->|BlockCode + 'mermaid'| J[Mermaid Renderer]
+    I -->|Link| K[Link Renderer]
+    I -->|FootnoteRef| L[Footnote Renderer]
+    I -->|Other| M[Standard HTML]
     
-    I --> O[Sidenote Component]
-    D --> O
+    J --> N[Diagram with Controls]
+    K --> O{Relative/Internal?}
+    O -->|Relative| P[Resolve Path]
+    P --> Q[Add HTMX attrs]
+    O -->|Internal| Q
+    O -->|External| R[Add target=_blank]
     
-    K --> P[Apply CSS Classes]
-    M --> P
-    N --> P
-    O --> P
-    J --> P
+    L --> S[Sidenote Component]
+    D --> S
     
-    P --> Q[Final HTML]
+    N --> T[Initial HTML]
+    Q --> T
+    R --> T
+    S --> T
+    M --> T
     
-    style G fill:#ffe6cc
-    style I fill:#d1ecf1
-    style L fill:#fff3cd
+    T --> U[Postprocess Tabs]
+    G --> U
+    U -->|Render Each Tab| V[ContentRenderer]
+    V --> U
+    
+    U --> W[Apply CSS Classes]
+    W --> X[Final HTML]
+    
+    style J fill:#ffe6cc
+    style L fill:#d1ecf1
+    style O fill:#fff3cd
+    style U fill:#e7d4ff
 ```
 
 ### 3. Mermaid Diagram Lifecycle
@@ -230,19 +243,27 @@ stateDiagram-v2
 - **Mermaid Diagrams**: Full support for flowcharts, sequence diagrams, state diagrams, etc.
 - **Interactive Diagrams**: Built-in zoom, pan, and reset controls for all mermaid diagrams
 - **Theme-aware Rendering**: Diagrams automatically re-render when switching light/dark mode
+- **Tabbed Content**: Create multi-tab sections using `:::tabs` syntax for comparing code, showing examples, etc.
+- **Relative Links**: Full support for relative markdown links (`./file.md`, `../other.md`) that work seamlessly with navigation
+- **Math Notation**: KaTeX support for inline `$E=mc^2$` and block `$$` math equations
+- **Superscript & Subscript**: Use `^text^` for superscript and `~text~` for subscript
 
 ### 🎨 Modern UI
 - **Responsive Design**: Works beautifully on all screen sizes
+- **Three-Panel Layout**: Posts sidebar, main content, and table of contents for easy navigation
 - **Dark Mode**: Automatic theme switching with localStorage persistence
 - **HTMX Navigation**: Fast, SPA-like navigation without full page reloads
 - **Collapsible Folders**: Organize posts in nested directories
+- **Auto-Generated TOC**: Table of contents automatically extracted from headings
 
 ### 🚀 Technical Highlights
 - Built on **FastHTML** for modern Python web development
-- Uses **Mistletoe** for extensible Markdown parsing
+- Uses **Mistletoe** for extensible Markdown parsing with custom renderers
 - **TailwindCSS** + **MonsterUI** for styling
 - **Hyperscript** for interactive behaviors
-- **Mermaid.js v11** for diagram rendering
+- **Mermaid.js v11** for diagram rendering with custom controls
+- **KaTeX** for mathematical notation rendering
+- **Smart Link Resolution**: Automatically converts relative links to proper routes
 
 ## Project Structure
 
