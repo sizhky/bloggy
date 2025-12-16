@@ -89,6 +89,17 @@ class Subscript(mst.span_token.SpanToken):
         self.content = match.group(1)
         self.children = []
 
+# Inline code with Pandoc-style attributes: `code`{.class #id}
+class InlineCodeAttr(mst.span_token.SpanToken):
+    pattern = re.compile(r'`([^`]+)`\{([^\}]+)\}')
+    parse_inner = False
+    parse_group = 1
+    precedence = 8  # Higher than other inline elements
+    def __init__(self, match):
+        self.code = match.group(1)
+        self.attrs = match.group(2)
+        self.children = []
+
 def preprocess_super_sub(content):
     """Convert superscript and subscript syntax to HTML before markdown rendering"""
     # Handle superscript ^text^
@@ -174,6 +185,40 @@ class ContentRenderer(FrankenRenderer):
     def render_subscript(self, token):
         """Render subscript text"""
         return f'<sub>{token.content}</sub>'
+    
+    def render_inline_code_attr(self, token):
+        """Render inline code with Pandoc-style attributes"""
+        import html
+        code = html.escape(token.code)
+        attrs = token.attrs.strip()
+        
+        # Parse attributes: .class, #id, key=value
+        classes = []
+        id_attr = None
+        other_attrs = []
+        
+        for attr in re.findall(r'\.([^\s\.#]+)|#([^\s\.#]+)|([^\s\.#=]+)=([^\s\.#]+)', attrs):
+            if attr[0]:  # .class
+                classes.append(attr[0])
+            elif attr[1]:  # #id
+                id_attr = attr[1]
+            elif attr[2]:  # key=value
+                other_attrs.append(f'{attr[2]}="{attr[3]}"')
+        
+        # Build HTML
+        html_attrs = []
+        if classes:
+            html_attrs.append(f'class="{" ".join(classes)}"')
+        if id_attr:
+            html_attrs.append(f'id="{id_attr}"')
+        html_attrs.extend(other_attrs)
+        
+        attr_str = ' ' + ' '.join(html_attrs) if html_attrs else ''
+        
+        # Use <span> instead of <code> for semantic attributes like .variable
+        # Use <code> only if no semantic class is present
+        tag = 'span' if any(cls in ['variable', 'emphasis', 'keyword'] for cls in classes) else 'code'
+        return f'<{tag}{attr_str}>{code}</{tag}>'
 
     def render_block_code(self, token):
         lang = getattr(token, 'language', '')
@@ -302,7 +347,9 @@ def postprocess_tabs(html, tab_data_store, img_dir, current_path, footnotes):
         for i, (_, tab_content) in enumerate(tabs):
             active = 'active' if i == 0 else ''
             # Render each tab's content as fresh markdown
-            rendered = mst.markdown(tab_content, partial(ContentRenderer, FootnoteRef, Superscript, Subscript, img_dir=img_dir, footnotes=footnotes, current_path=current_path))
+            with ContentRenderer(InlineCodeAttr, FootnoteRef, Superscript, Subscript, img_dir=img_dir, footnotes=footnotes, current_path=current_path) as renderer:
+                doc = mst.Document(tab_content)
+                rendered = renderer.render(doc)
             html_parts.append(f'<div class="tab-panel {active}" data-tab-index="{i}">{rendered}</div>')
         html_parts.append('</div>')
         
@@ -333,7 +380,11 @@ def from_md(content, img_dir=None, current_path=None):
             'ul': 'uk-list uk-list-bullet space-y-2 mb-6 ml-6 text-base', 'ol': 'uk-list uk-list-decimal space-y-2 mb-6 ml-6 text-base', 
             'hr': 'border-t border-border my-8', 'h1': 'text-3xl font-bold mb-6 mt-8', 'h2': 'text-2xl font-semibold mb-4 mt-6', 
             'h3': 'text-xl font-semibold mb-3 mt-5', 'h4': 'text-lg font-semibold mb-2 mt-4'}
-    html = mst.markdown(content, partial(ContentRenderer, FootnoteRef, Superscript, Subscript, img_dir=img_dir, footnotes=footnotes, current_path=current_path))
+    
+    # Register custom tokens with renderer context manager
+    with ContentRenderer(InlineCodeAttr, FootnoteRef, Superscript, Subscript, img_dir=img_dir, footnotes=footnotes, current_path=current_path) as renderer:
+        doc = mst.Document(content)
+        html = renderer.render(doc)
     
     # Post-process: replace tab placeholders with rendered tabs
     if tab_data_store:
@@ -348,6 +399,7 @@ def get_blog_title(): return get_config().get_blog_title()
 hdrs = (
     *Theme.slate.headers(highlightjs=True),
     Link(rel="icon", href="/static/favicon.png"),
+    Link(rel="stylesheet", href="/static/custom.css"),
     Script(src="https://unpkg.com/hyperscript.org@0.9.12"),
     Script(src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs", type="module"),
     Script("""
@@ -646,7 +698,40 @@ def build_toc_items(headings):
         ))
     return items
 
-def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None):
+def get_custom_css_links(current_path=None):
+    """Check for custom.css or style.css in blog root and current post's directory
+    
+    Returns list of Link elements for all found CSS files, ordered from root to specific
+    (so more specific styles can override general ones)
+    """
+    root = get_root_folder()
+    css_links = []
+    
+    # First, check root directory
+    for filename in ['custom.css', 'style.css']:
+        css_file = root / filename
+        if css_file.exists():
+            css_links.append(Link(rel="stylesheet", href=f"/posts/{filename}"))
+            break  # Only one from root
+    
+    # Then check current post's directory (if provided)
+    if current_path:
+        from pathlib import Path
+        post_dir = Path(current_path).parent if '/' in current_path else Path('.')
+        
+        if str(post_dir) != '.':  # Not in root
+            for filename in ['custom.css', 'style.css']:
+                css_file = root / post_dir / filename
+                if css_file.exists():
+                    css_links.append(Link(rel="stylesheet", href=f"/posts/{post_dir}/{filename}"))
+                    break  # Only one per directory
+    
+    return css_links
+
+def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, current_path=None):
+    # Inject custom CSS dynamically if it exists (from root and current directory)
+    custom_css_links = get_custom_css_links(current_path)
+    
     if show_sidebar:
         # Build TOC if content provided
         toc_items = build_toc_items(extract_toc(toc_content)) if toc_content else []
@@ -691,7 +776,10 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None):
         
         # For HTMX requests, return main content + TOC with out-of-band swap (Posts sidebar stays static)
         if htmx and htmx.request:
-            return Title(title), main_content_container, toc_sidebar
+            result = [Title(title)]
+            result.extend(custom_css_links)
+            result.extend([main_content_container, toc_sidebar])
+            return tuple(result)
         
     else:
         # Default layout without sidebar
@@ -704,10 +792,16 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None):
         
         # For HTMX requests without sidebar
         if htmx and htmx.request:
-            return Title(title), *content
+            result = [Title(title)]
+            result.extend(custom_css_links)
+            result.extend(content)
+            return tuple(result)
     
     # For full page loads, return complete page
-    return Title(title), body_content
+    result = [Title(title)]
+    result.extend(custom_css_links)
+    result.append(body_content)
+    return tuple(result)
 
 def build_post_tree(folder):
     root = get_root_folder()
@@ -762,7 +856,7 @@ def post_detail(path: str, htmx):
     
     # Always return complete layout with sidebar and TOC
     return layout(post_content, htmx=htmx, title=f"{post_title} - {get_blog_title()}", 
-                  show_sidebar=True, toc_content=raw_content)
+                  show_sidebar=True, toc_content=raw_content, current_path=path)
 
 def find_index_file():
     """Find index.md or readme.md (case insensitive) in root folder"""
@@ -796,7 +890,7 @@ def index(htmx):
         content = from_md(raw_content, current_path=index_path)
         page_content = Div(H1(page_title, cls="text-4xl font-bold mb-8"), content)
         return layout(page_content, htmx=htmx, title=f"{page_title} - {blog_title}", 
-                      show_sidebar=True, toc_content=raw_content)
+                      show_sidebar=True, toc_content=raw_content, current_path=index_path)
     else:
         # Default welcome message
         return layout(Div(

@@ -1,0 +1,15 @@
+span.variable {
+    color: #e06c75 !important;
+    position: relative !important;
+}
+
+span.variable::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 2px;
+    background-color: currentColor;
+}
