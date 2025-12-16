@@ -171,11 +171,9 @@ def navbar():
                cls="flex items-center justify-between bg-slate-900 text-white p-4 my-4 rounded-lg shadow-md dark:bg-slate-800")
 
 def layout(*content, htmx, title=None, show_sidebar=False):
-    if htmx and htmx.request: return (Title(title), *content)
-    
     if show_sidebar:
         # Layout with sidebar for blog posts
-        return Title(title), Div(cls="flex flex-col min-h-screen")(
+        body_content = Div(id="page-container", cls="flex flex-col min-h-screen")(
             Div(navbar(), cls="w-full max-w-7xl mx-auto px-4 sticky top-0 z-50 mt-4"),
             Div(cls="w-full max-w-7xl mx-auto px-4 flex gap-6 flex-1")(
                 # Left sidebar - collapsible post list
@@ -188,24 +186,31 @@ def layout(*content, htmx, title=None, show_sidebar=False):
                         ),
                         open=True
                     ),
-                    cls="hidden md:block w-64 shrink-0 sticky top-24 h-fit"
+                    cls="hidden md:block w-64 shrink-0 sticky top-24 h-fit z-[1000]"
                 ),
                 # Main content
                 Main(*content, cls="flex-1 min-w-0 px-6 py-8 space-y-8", id="main-content"),
                 # Right sidebar placeholder for TOC (to be implemented)
-                Aside(cls="hidden md:block w-64 shrink-0")
+                Aside(cls="hidden md:block w-64 shrink-0 z-[1000]")
             ),
             Footer(Div(f"Powered by Bloggy", cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), # right justified footer
                    cls="w-full max-w-7xl mx-auto px-6 mt-auto mb-6")
         )
+    else:
+        # Default layout without sidebar
+        body_content = Div(id="page-container", cls="flex flex-col min-h-screen")(
+            Div(navbar(), cls="w-full max-w-2xl mx-auto px-4 sticky top-0 z-50 mt-4"),
+            Main(*content, cls="w-full max-w-2xl mx-auto px-6 py-8 space-y-8", id="main-content"),
+            Footer(Div("Powered by Bloggy", cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), 
+                   cls="w-full max-w-2xl mx-auto px-6 mt-auto mb-6")
+        )
     
-    # Default layout without sidebar
-    return Title(title), Div(cls="flex flex-col min-h-screen")(
-        Div(navbar(), cls="w-full max-w-2xl mx-auto px-4 sticky top-0 z-50 mt-4"),
-        Main(*content, cls="w-full max-w-2xl mx-auto px-6 py-8 space-y-8", id="main-content"),
-        Footer(Div("Powered by Bloggy", cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), 
-               cls="w-full max-w-2xl mx-auto px-6 mt-auto mb-6")
-    )
+    # For HTMX requests, return just the body content with title update
+    if htmx and htmx.request:
+        return Title(title), body_content
+    
+    # For full page loads, return complete page
+    return Title(title), body_content
 
 def build_post_tree(folder):
     root = get_root_folder()
@@ -229,7 +234,7 @@ def build_post_tree(folder):
             title = slug_to_title(item.stem)
             items.append(Li(A(Div(Span(cls="w-4 mr-1"), Span(UkIcon("file-text", cls="text-slate-400"), cls="w-5 flex justify-center mr-2"),
                 title, cls="flex items-center"), href=f'/posts/{slug}',
-                hx_get=f'/posts/{slug}', hx_target="#main-content", hx_push_url="true", hx_swap="innerHTML show:window:top",
+                hx_get=f'/posts/{slug}', hx_target="#page-container", hx_push_url="true", hx_swap="innerHTML show:window:top",
                 cls="block py-1 px-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors")))
     return items
 
@@ -242,11 +247,7 @@ def post_detail(path: str, htmx):
     blog_title = slug_to_title(path.split('/')[-1])
     post_content = Div(H1(blog_title, cls="text-4xl font-bold"), content)
     
-    # For HTMX requests, return just the content with Title
-    if htmx and htmx.request:
-        return Title(f"{blog_title} - {get_blog_title()}"), post_content
-    
-    # For full page loads, return complete layout with sidebar
+    # Always return complete layout with sidebar
     return layout(post_content, htmx=htmx, title=f"{blog_title} - {get_blog_title()}", show_sidebar=True)
 
 @rt
