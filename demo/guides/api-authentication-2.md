@@ -11,8 +11,6 @@ tags:
 description: Complete guide to API authentication mechanisms, security best practices, and OAuth2 implementation.
 ---
 
-# API Authentication and Security
-
 This document outlines the authentication methods, security protocols, and best practices for accessing our platform via API.
 
 > [!IMPORTANT]

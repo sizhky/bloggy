@@ -9,6 +9,39 @@ from .config import get_config
 
 slug_to_title = lambda s: ' '.join(word.capitalize() for word in s.replace('-', ' ').replace('_', ' ').split())
 
+def text_to_anchor(text):
+    """Convert text to anchor slug"""
+    return re.sub(r'[^\w\s-]', '', text.lower()).replace(' ', '-')
+
+# Cache for parsed frontmatter to avoid re-reading files
+_frontmatter_cache = {}
+
+def parse_frontmatter(file_path):
+    """Parse frontmatter from a markdown file with caching"""
+    file_path = Path(file_path)
+    cache_key = str(file_path)
+    mtime = file_path.stat().st_mtime
+    
+    if cache_key in _frontmatter_cache:
+        cached_mtime, cached_data = _frontmatter_cache[cache_key]
+        if cached_mtime == mtime:
+            return cached_data
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            post = frontmatter.load(f)
+            result = (post.metadata, post.content)
+            _frontmatter_cache[cache_key] = (mtime, result)
+            return result
+    except Exception as e:
+        print(f"Error parsing frontmatter from {file_path}: {e}")
+        return {}, open(file_path).read()
+
+def get_post_title(file_path):
+    """Get post title from frontmatter or filename"""
+    metadata, _ = parse_frontmatter(file_path)
+    return metadata.get('title', slug_to_title(file_path.stem))
+
 # Markdown rendering setup
 try: FrankenRenderer
 except NameError:
@@ -56,6 +89,13 @@ class ContentRenderer(FrankenRenderer):
         note = Span(NotStr(rendered), id=f"sn-{n}", role="doc-footnote", aria_labelledby=f"snref-{n}", cls=f"sidenote {style}")
         hide = lambda c: to_xml(Span(c, cls="hidden", aria_hidden="true"))
         return hide(" (") + to_xml(ref) + to_xml(note) + hide(")")
+    
+    def render_heading(self, token):
+        """Render headings with anchor IDs for TOC linking"""
+        level = token.level
+        inner = self.render_inner(token)
+        anchor = text_to_anchor(inner)
+        return f'<h{level} id="{anchor}">{inner}</h{level}>'
 
     def render_block_code(self, token):
         lang = getattr(token, 'language', '')
@@ -149,6 +189,18 @@ hdrs = (
     Link(rel="stylesheet", href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono&display=swap"),
     Style("body { font-family: 'IBM Plex Sans', sans-serif; } code, pre { font-family: 'IBM Plex Mono', monospace; }"),
     Style(".folder-chevron { transition: transform 0.2s; display: inline-block; } details[open] > summary > .folder-chevron { transform: rotate(90deg); } details { border: none !important; box-shadow: none !important; }"),
+    Style("h1, h2, h3, h4, h5, h6 { scroll-margin-top: 7rem; }"),  # Offset for sticky navbar
+    Style("""
+        /* Ultra thin scrollbar styles */
+        * { scrollbar-width: thin; scrollbar-color: rgb(203 213 225) transparent; }
+        *::-webkit-scrollbar { width: 3px; height: 3px; }
+        *::-webkit-scrollbar-track { background: transparent; }
+        *::-webkit-scrollbar-thumb { background-color: rgb(203 213 225); border-radius: 2px; }
+        *::-webkit-scrollbar-thumb:hover { background-color: rgb(148 163 184); }
+        .dark *::-webkit-scrollbar-thumb { background-color: rgb(71 85 105); }
+        .dark *::-webkit-scrollbar-thumb:hover { background-color: rgb(100 116 139); }
+        .dark * { scrollbar-color: rgb(71 85 105) transparent; }
+    """),
     Script("if(!localStorage.__FRANKEN__) localStorage.__FRANKEN__ = JSON.stringify({mode: 'light'})"))
 
 app = FastHTML(hdrs=hdrs)
@@ -170,32 +222,98 @@ def navbar():
     return Div(A(get_blog_title(), href="/"), theme_toggle(),
                cls="flex items-center justify-between bg-slate-900 text-white p-4 my-4 rounded-lg shadow-md dark:bg-slate-800")
 
-def layout(*content, htmx, title=None, show_sidebar=False):
+def collapsible_sidebar(icon, title, items_list, is_open=True):
+    """Reusable collapsible sidebar component with sticky header"""
+    return Details(
+        Summary(UkIcon(icon, cls="w-5 h-5 mr-2"), title, 
+                cls="flex items-center font-semibold cursor-pointer py-2 px-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg select-none list-none sticky top-0 bg-white dark:bg-slate-950 z-10"),
+        Div(
+            Ul(*items_list, cls="mt-2 list-none"),
+            cls="mt-2 p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-y-auto"
+        ),
+        open=is_open
+    )
+
+def extract_toc(content):
+    """Extract table of contents from markdown content, excluding code blocks"""
+    # Remove code blocks (both fenced and indented) to avoid false positives
+    # Remove fenced code blocks (``` or ~~~)
+    content_no_code = re.sub(r'^```.*?^```', '', content, flags=re.MULTILINE | re.DOTALL)
+    content_no_code = re.sub(r'^~~~.*?^~~~', '', content_no_code, flags=re.MULTILINE | re.DOTALL)
+    
+    # Parse headings from the cleaned content
+    heading_pattern = re.compile(r'^(#{1,6})\s+(.+)$', re.MULTILINE)
+    headings = []
+    for match in heading_pattern.finditer(content_no_code):
+        level = len(match.group(1))
+        text = match.group(2).strip()
+        # Create anchor from heading text using shared function
+        anchor = text_to_anchor(text)
+        headings.append((level, text, anchor))
+    return headings
+
+def build_toc_items(headings):
+    """Build TOC items from extracted headings"""
+    if not headings:
+        return [Li("No headings found", cls="text-sm text-slate-500 dark:text-slate-400 py-1")]
+    
+    items = []
+    for level, text, anchor in headings:
+        indent = "ml-0" if level == 1 else f"ml-{(level-1)*3}"
+        items.append(Li(
+            A(text, href=f"#{anchor}", 
+              cls=f"block py-1 px-2 text-sm rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors {indent}"),
+            cls="my-1"
+        ))
+    return items
+
+def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None):
     if show_sidebar:
+        # Build TOC if content provided
+        toc_items = build_toc_items(extract_toc(toc_content)) if toc_content else []
+        
+        # Right sidebar TOC component with out-of-band swap for HTMX
+        toc_attrs = {
+            "cls": "hidden md:block w-64 shrink-0 sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-y-auto z-[1000]",
+            "id": "toc-sidebar"
+        }
+        if htmx and htmx.request:
+            toc_attrs["hx_swap_oob"] = "true"
+        
+        toc_sidebar = Aside(
+            collapsible_sidebar("list", "Contents", toc_items, is_open=True) if toc_items else Div(),
+            **toc_attrs
+        )
+        
+        # Container for main content only (for HTMX swapping)
+        main_content_container = Main(*content, cls="flex-1 min-w-0 px-6 py-8 space-y-8", id="main-content")
+        
+        # Full layout with all sidebars
+        content_with_sidebars = Div(cls="w-full max-w-7xl mx-auto px-4 flex gap-6 flex-1")(
+            # Left sidebar - collapsible post list (stays static)
+            Aside(
+                collapsible_sidebar("menu", "Posts", get_posts(), is_open=True),
+                cls="hidden md:block w-64 shrink-0 sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-y-auto z-[1000]",
+                id="posts-sidebar"
+            ),
+            # Main content (swappable)
+            main_content_container,
+            # Right sidebar - TOC (swappable out-of-band)
+            toc_sidebar
+        )
+        
         # Layout with sidebar for blog posts
         body_content = Div(id="page-container", cls="flex flex-col min-h-screen")(
             Div(navbar(), cls="w-full max-w-7xl mx-auto px-4 sticky top-0 z-50 mt-4"),
-            Div(cls="w-full max-w-7xl mx-auto px-4 flex gap-6 flex-1")(
-                # Left sidebar - collapsible post list
-                Aside(
-                    Details(
-                        Summary(UkIcon("menu", cls="w-5 h-5 mr-2"), "Posts", cls="flex items-center font-semibold cursor-pointer py-2 px-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg select-none list-none"),
-                        Div(
-                            Ul(*get_posts(), cls="mt-2 list-none"),
-                            cls="mt-2 p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800"
-                        ),
-                        open=True
-                    ),
-                    cls="hidden md:block w-64 shrink-0 sticky top-24 h-fit z-[1000]"
-                ),
-                # Main content
-                Main(*content, cls="flex-1 min-w-0 px-6 py-8 space-y-8", id="main-content"),
-                # Right sidebar placeholder for TOC (to be implemented)
-                Aside(cls="hidden md:block w-64 shrink-0 z-[1000]")
-            ),
+            content_with_sidebars,
             Footer(Div(f"Powered by Bloggy", cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), # right justified footer
                    cls="w-full max-w-7xl mx-auto px-6 mt-auto mb-6")
         )
+        
+        # For HTMX requests, return main content + TOC with out-of-band swap (Posts sidebar stays static)
+        if htmx and htmx.request:
+            return Title(title), main_content_container, toc_sidebar
+        
     else:
         # Default layout without sidebar
         body_content = Div(id="page-container", cls="flex flex-col min-h-screen")(
@@ -204,10 +322,10 @@ def layout(*content, htmx, title=None, show_sidebar=False):
             Footer(Div("Powered by Bloggy", cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), 
                    cls="w-full max-w-2xl mx-auto px-6 mt-auto mb-6")
         )
-    
-    # For HTMX requests, return only the content (partial hydration)
-    if htmx and htmx.request:
-        return Title(title), *content
+        
+        # For HTMX requests without sidebar
+        if htmx and htmx.request:
+            return Title(title), *content
     
     # For full page loads, return complete page
     return Title(title), body_content
@@ -230,11 +348,17 @@ def build_post_tree(folder):
                            folder_title, cls="flex items-center font-medium cursor-pointer py-1 px-2 hover:text-blue-600 select-none list-none rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"),
                     Ul(*sub_items, cls="ml-6 pl-2 space-y-1 border-l border-slate-100 dark:border-slate-800"), open=False), cls="my-1"))
         elif item.suffix == '.md':
+            # Skip the file being used for home page (index.md takes precedence over readme.md)
+            if item.parent == root:
+                index_file = find_index_file()
+                if index_file and item.resolve() == index_file.resolve():
+                    continue
+            
             slug = str(item.relative_to(root).with_suffix(''))
-            title = slug_to_title(item.stem)
+            title = get_post_title(item)
             items.append(Li(A(Div(Span(cls="w-4 mr-1"), Span(UkIcon("file-text", cls="text-slate-400"), cls="w-5 flex justify-center mr-2"),
                 title, cls="flex items-center"), href=f'/posts/{slug}',
-                hx_get=f'/posts/{slug}', hx_target="#main-content", hx_push_url="true", hx_swap="innerHTML show:window:top",
+                hx_get=f'/posts/{slug}', hx_target="#main-content", hx_push_url="true", hx_swap="outerHTML show:window:top settle:0.1s",
                 cls="block py-1 px-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors")))
     return items
 
@@ -243,20 +367,57 @@ def get_posts(): return build_post_tree(get_root_folder())
 @rt('/posts/{path:path}')
 def post_detail(path: str, htmx):
     file_path = get_root_folder() / f'{path}.md'
-    content = from_md(open(file_path).read())
-    blog_title = slug_to_title(path.split('/')[-1])
-    post_content = Div(H1(blog_title, cls="text-4xl font-bold"), content)
+    metadata, raw_content = parse_frontmatter(file_path)
     
-    # Always return complete layout with sidebar
-    return layout(post_content, htmx=htmx, title=f"{blog_title} - {get_blog_title()}", show_sidebar=True)
+    # Get title from frontmatter or filename
+    post_title = metadata.get('title', slug_to_title(path.split('/')[-1]))
+    
+    # Render the markdown content
+    content = from_md(raw_content)
+    post_content = Div(H1(post_title, cls="text-4xl font-bold mb-8"), content)
+    
+    # Always return complete layout with sidebar and TOC
+    return layout(post_content, htmx=htmx, title=f"{post_title} - {get_blog_title()}", 
+                  show_sidebar=True, toc_content=raw_content)
+
+def find_index_file():
+    """Find index.md or readme.md (case insensitive) in root folder"""
+    root = get_root_folder()
+    
+    # Try to find index.md first (case insensitive)
+    for file in root.iterdir():
+        if file.is_file() and file.suffix == '.md' and file.stem.lower() == 'index':
+            return file
+    
+    # Try to find readme.md (case insensitive)
+    for file in root.iterdir():
+        if file.is_file() and file.suffix == '.md' and file.stem.lower() == 'readme':
+            return file
+    
+    return None
 
 @rt
 def index(htmx):
     blog_title = get_blog_title()
-    return layout(Div(
-        H1(f"Welcome to {blog_title}!", cls="text-4xl font-bold tracking-tight mb-2"),
-        P("Your personal blogging platform.", cls="text-lg text-slate-600 dark:text-slate-400 mb-8"),
-        Card(Div(H2("Posts", cls="text-xl font-semibold mb-2"), Hr(), cls="border-b border-slate-100 dark:border-slate-700"),
-             Ul(*get_posts(), cls="mt-0 pt-0 list-none", style="margin-top:1rem;"),
-             cls="p-6 shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-slate-900 rounded-lg"),
-        cls="w-full"), htmx=htmx, title=f"Home - {blog_title}")
+    
+    # Try to find index.md or readme.md
+    index_file = find_index_file()
+    
+    if index_file:
+        # Render the index/readme file
+        metadata, raw_content = parse_frontmatter(index_file)
+        page_title = metadata.get('title', blog_title)
+        content = from_md(raw_content)
+        page_content = Div(H1(page_title, cls="text-4xl font-bold mb-8"), content)
+        return layout(page_content, htmx=htmx, title=f"{page_title} - {blog_title}", 
+                      show_sidebar=True, toc_content=raw_content)
+    else:
+        # Default welcome message
+        return layout(Div(
+            H1(f"Welcome to {blog_title}!", cls="text-4xl font-bold tracking-tight mb-8"),
+            P("Your personal blogging platform.", cls="text-lg text-slate-600 dark:text-slate-400 mb-4"),
+            P("Browse your posts using the sidebar, or create an ", 
+              Strong("index.md"), " or ", Strong("README.md"), 
+              " file in your blog directory to customize this page.", 
+              cls="text-base text-slate-600 dark:text-slate-400"),
+            cls="w-full"), htmx=htmx, title=f"Home - {blog_title}", show_sidebar=True)

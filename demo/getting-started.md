@@ -10,8 +10,6 @@ tags:
 description: A comprehensive guide to get you up and running with our platform in minutes.
 ---
 
-# Getting Started with Our Platform
-
 Welcome to our official documentation! This guide will walk you through the initial setup and basic concepts you need to know to start using our platform effectively[^1].
 
 > [!NOTE]
@@ -67,13 +65,3 @@ Go to Team Management → Invite Members
 - Review our [Integration Guide](/docs/integrations)
 - Set up [API Keys](/docs/api-keys)[^3]
 - Join our community Slack channel
-
----
-
-**Last Updated:** December 11, 2025 | **Version:** 1.0
-
-[^1]: Our platform is built on modern web technologies and follows industry best practices for security and scalability.
-
-[^2]: Administrator access is required for initial setup. You can invite additional users with different permission levels after completing the setup process.
-
-[^3]: API keys are essential for programmatic access to your platform resources. Keep them secure and rotate them regularly for optimal security.
