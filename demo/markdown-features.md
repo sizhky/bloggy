@@ -241,7 +241,7 @@ def hello_world():
 <https://www.example.com>
 
 ### Relative Links
-[Lorem Ipsum](lorem-ipsum)
+[Flat Land](flat-land/chapter-01.md)
 
 [Home](/)
 
@@ -263,7 +263,7 @@ def hello_world():
 <https://www.example.com>
 
 ### Relative Links
-[Getting Started](getting-started)
+[Flat Land](flat-land/chapter-01.md)
 
 [Home](/)
 
