@@ -72,6 +72,54 @@ def extract_footnotes(content):
     for m in pat.finditer(content): content = content.replace(m.group(0), '', 1)
     return content.strip(), defs
 
+def preprocess_tabs(content):
+    """Convert :::tabs syntax to HTML tabs before markdown rendering"""
+    import hashlib
+    
+    # Pattern to match :::tabs...:::
+    tabs_pattern = re.compile(r'^:::tabs\s*\n(.*?)^:::', re.MULTILINE | re.DOTALL)
+    
+    def replace_tabs_block(match):
+        tabs_content = match.group(1)
+        # Pattern to match ::tab{title="..."}
+        tab_pattern = re.compile(r'^::tab\{title="([^"]+)"\}\s*\n(.*?)(?=^::tab\{|\Z)', re.MULTILINE | re.DOTALL)
+        
+        tabs = []
+        for tab_match in tab_pattern.finditer(tabs_content):
+            title = tab_match.group(1)
+            content = tab_match.group(2).strip()
+            tabs.append((title, content))
+        
+        if not tabs:
+            return match.group(0)  # Return original if no tabs found
+        
+        # Generate unique ID for this tab group
+        tab_id = hashlib.md5(match.group(0).encode()).hexdigest()[:8]
+        
+        # Build HTML for tabs
+        html_parts = [f'<div class="tabs-container" data-tabs-id="{tab_id}">']
+        
+        # Tab buttons
+        html_parts.append('<div class="tabs-header">')
+        for i, (title, _) in enumerate(tabs):
+            active = 'active' if i == 0 else ''
+            html_parts.append(f'<button class="tab-button {active}" onclick="switchTab(\'{tab_id}\', {i})">{title}</button>')
+        html_parts.append('</div>')
+        
+        # Tab content panels
+        html_parts.append('<div class="tabs-content">')
+        for i, (_, content) in enumerate(tabs):
+            active = 'active' if i == 0 else ''
+            # Render the content as markdown
+            rendered = mst.markdown(content, FrankenRenderer)
+            html_parts.append(f'<div class="tab-panel {active}" data-tab-index="{i}">{rendered}</div>')
+        html_parts.append('</div>')
+        
+        html_parts.append('</div>')
+        return '\n'.join(html_parts)
+    
+    return tabs_pattern.sub(replace_tabs_block, content)
+
 class ContentRenderer(FrankenRenderer):
     def __init__(self, *extras, img_dir=None, footnotes=None, **kwargs):
         super().__init__(*extras, img_dir=img_dir, **kwargs)
@@ -167,6 +215,7 @@ class ContentRenderer(FrankenRenderer):
 
 def from_md(content, img_dir='/static/images'):
     content, footnotes = extract_footnotes(content)
+    content = preprocess_tabs(content)  # Preprocess tabs before markdown rendering
     mods = {'pre': 'my-4', 'p': 'text-base leading-relaxed mb-6', 'li': 'text-base leading-relaxed',
             'ul': 'uk-list uk-list-bullet space-y-2 mb-6 ml-6 text-base', 'ol': 'uk-list uk-list-decimal space-y-2 mb-6 ml-6 text-base', 
             'hr': 'border-t border-border my-8', 'h1': 'text-3xl font-bold mb-6 mt-8', 'h2': 'text-2xl font-semibold mb-4 mt-6', 
@@ -183,6 +232,79 @@ hdrs = (
     Link(rel="icon", href="/static/favicon.png"),
     Script(src="https://unpkg.com/hyperscript.org@0.9.12"),
     Script(src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs", type="module"),
+    Script("""
+        // Tab switching functionality (global scope)
+        function switchTab(tabsId, index) {
+            console.log('switchTab called:', tabsId, index);
+            const container = document.querySelector('.tabs-container[data-tabs-id="' + tabsId + '"]');
+            console.log('container:', container);
+            if (!container) return;
+            
+            // Update buttons
+            const buttons = container.querySelectorAll('.tab-button');
+            buttons.forEach(function(btn, i) {
+                if (i === index) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // Update panels
+            const panels = container.querySelectorAll('.tab-panel');
+            panels.forEach(function(panel, i) {
+                if (i === index) {
+                    panel.classList.add('active');
+                    panel.style.position = 'relative';
+                    panel.style.visibility = 'visible';
+                    panel.style.opacity = '1';
+                    panel.style.pointerEvents = 'auto';
+                } else {
+                    panel.classList.remove('active');
+                    panel.style.position = 'absolute';
+                    panel.style.visibility = 'hidden';
+                    panel.style.opacity = '0';
+                    panel.style.pointerEvents = 'none';
+                }
+            });
+        }
+        window.switchTab = switchTab;
+        
+        // Set tab container heights based on tallest panel
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                document.querySelectorAll('.tabs-container').forEach(container => {
+                    const panels = container.querySelectorAll('.tab-panel');
+                    let maxHeight = 0;
+                    
+                    // Temporarily show all panels to measure their heights
+                    panels.forEach(panel => {
+                        const wasActive = panel.classList.contains('active');
+                        panel.style.position = 'relative';
+                        panel.style.visibility = 'visible';
+                        panel.style.opacity = '1';
+                        panel.style.pointerEvents = 'auto';
+                        
+                        const height = panel.offsetHeight;
+                        if (height > maxHeight) maxHeight = height;
+                        
+                        if (!wasActive) {
+                            panel.style.position = 'absolute';
+                            panel.style.visibility = 'hidden';
+                            panel.style.opacity = '0';
+                            panel.style.pointerEvents = 'none';
+                        }
+                    });
+                    
+                    // Set the content area to the max height
+                    const tabsContent = container.querySelector('.tabs-content');
+                    if (tabsContent && maxHeight > 0) {
+                        tabsContent.style.minHeight = maxHeight + 'px';
+                    }
+                });
+            }, 100);
+        });
+    """),
     Script(src="/static/scripts.js", type='module'),
     Link(rel="preconnect", href="https://fonts.googleapis.com"), 
     Link(rel="preconnect", href="https://fonts.gstatic.com", crossorigin=""),
@@ -200,6 +322,111 @@ hdrs = (
         .dark *::-webkit-scrollbar-thumb { background-color: rgb(71 85 105); }
         .dark *::-webkit-scrollbar-thumb:hover { background-color: rgb(100 116 139); }
         .dark * { scrollbar-color: rgb(71 85 105) transparent; }
+        
+        /* Tabs styles */
+        .tabs-container { 
+            margin: 2rem 0; 
+            border: 1px solid rgb(226 232 240); 
+            border-radius: 0.5rem; 
+            overflow: hidden; 
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        }
+        .dark .tabs-container { 
+            border-color: rgb(51 65 85);
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+        }
+        
+        .tabs-header { 
+            display: flex; 
+            background: rgb(248 250 252); 
+            border-bottom: 1px solid rgb(226 232 240);
+            gap: 0;
+        }
+        .dark .tabs-header { 
+            background: rgb(15 23 42); 
+            border-bottom-color: rgb(51 65 85);
+        }
+        
+        .tab-button { 
+            flex: 1; 
+            padding: 0.875rem 1.5rem; 
+            background: transparent; 
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer; 
+            font-weight: 500; 
+            font-size: 0.9375rem;
+            color: rgb(100 116 139); 
+            transition: all 0.15s ease;
+            position: relative;
+            margin-bottom: -1px;
+        }
+        .dark .tab-button { color: rgb(148 163 184); }
+        
+        .tab-button:hover:not(.active) { 
+            background: rgb(241 245 249); 
+            color: rgb(51 65 85);
+        }
+        .dark .tab-button:hover:not(.active) { 
+            background: rgb(30 41 59); 
+            color: rgb(226 232 240);
+        }
+        
+        .tab-button.active { 
+            color: rgb(59 130 246); 
+            border-bottom-color: rgb(59 130 246); 
+            background: white;
+            font-weight: 600;
+        }
+        .dark .tab-button.active { 
+            color: rgb(96 165 250); 
+            border-bottom-color: rgb(96 165 250); 
+            background: rgb(2 6 23);
+        }
+        
+        .tabs-content { 
+            background: white;
+            position: relative;
+        }
+        .dark .tabs-content { 
+            background: rgb(2 6 23);
+        }
+        
+        .tab-panel { 
+            padding: 2rem;
+            animation: fadeIn 0.2s ease-in;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .tab-panel.active { 
+            position: relative;
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Remove extra margins from first/last elements in tabs */
+        .tab-panel > *:first-child { margin-top: 0 !important; }
+        .tab-panel > *:last-child { margin-bottom: 0 !important; }
+        
+        /* Ensure code blocks in tabs look good */
+        .tab-panel pre { 
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+        .tab-panel code { 
+            font-family: 'IBM Plex Mono', monospace;
+        }
     """),
     Script("if(!localStorage.__FRANKEN__) localStorage.__FRANKEN__ = JSON.stringify({mode: 'light'})"))
 
@@ -226,10 +453,10 @@ def collapsible_sidebar(icon, title, items_list, is_open=True):
     """Reusable collapsible sidebar component with sticky header"""
     return Details(
         Summary(UkIcon(icon, cls="w-5 h-5 mr-2"), title, 
-                cls="flex items-center font-semibold cursor-pointer py-2 px-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg select-none list-none sticky top-0 bg-white dark:bg-slate-950 z-10"),
+                cls="flex items-center font-semibold cursor-pointer py-2 px-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg select-none list-none bg-white dark:bg-slate-950 z-10"),
         Div(
             Ul(*items_list, cls="mt-2 list-none"),
-            cls="mt-2 p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-y-auto"
+            cls="mt-2 p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-y-auto max-h-[calc(100vh-16rem)]"
         ),
         open=is_open
     )
@@ -274,7 +501,7 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None):
         
         # Right sidebar TOC component with out-of-band swap for HTMX
         toc_attrs = {
-            "cls": "hidden md:block w-64 shrink-0 sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-y-auto z-[1000]",
+            "cls": "hidden md:block w-64 shrink-0 sticky top-24 self-start max-h-[calc(100vh-10rem)] overflow-hidden z-[1000]",
             "id": "toc-sidebar"
         }
         if htmx and htmx.request:
@@ -293,7 +520,7 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None):
             # Left sidebar - collapsible post list (stays static)
             Aside(
                 collapsible_sidebar("menu", "Posts", get_posts(), is_open=True),
-                cls="hidden md:block w-64 shrink-0 sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-y-auto z-[1000]",
+                cls="hidden md:block w-64 shrink-0 sticky top-24 self-start max-h-[calc(100vh-10rem)] overflow-hidden z-[1000]",
                 id="posts-sidebar"
             ),
             # Main content (swappable)

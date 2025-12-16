@@ -17,7 +17,6 @@ Heading Level 2
 ### Heading Level 3
 #### Heading Level 4
 ##### Heading Level 5
-###### Heading Level 6
 
 ## Paragraphs
 
@@ -216,12 +215,36 @@ $$
 $$
 
 ## Diagrams
-
+````
 ```mermaid
-graph TD
-    A --> B
-    B --> C
-    C --> D
+---
+width: 65vw
+---
+gantt
+    title A Gantt Diagram
+    dateFormat  YYYY-MM-DD
+    section Section
+    A task           :a1, 2014-01-01, 30d
+    Another task     :after a1  , 20d
+    section Another
+    Task in sec      :2014-01-12  , 12d
+    another task      : 24d
+```
+````
+will render to
+```mermaid
+---
+width: 65vw
+---
+gantt
+    title A Gantt Diagram
+    dateFormat  YYYY-MM-DD
+    section Section
+    A task           :a1, 2014-01-01, 30d
+    Another task     :after a1  , 20d
+    section Another
+    Task in sec      :2014-01-12  , 12d
+    another task      : 24d
 ```
 
 ## Smart Typography
@@ -267,3 +290,43 @@ This is a citation [@doe2025].
 ## Escaping Characters
 
 \*Not italicized\*
+
+## Tabbed Content
+
+You can create tabbed sections to show multiple versions of content, like code in different languages or rendered output vs source code.
+
+:::tabs
+::tab{title="Rendered"}
+This is the **rendered output** with _markdown formatting_.
+
+- List item 1
+- List item 2
+- List item 3
+
+```python
+print("Hello, World!")
+```
+::tab{title="Markdown Source"}
+```markdown
+This is the **rendered output** with _markdown formatting_.
+
+- List item 1
+- List item 2
+- List item 3
+
+\`\`\`python
+print("Hello, World!")
+\`\`\`
+```
+::tab{title="HTML"}
+```html
+<div>
+  <p>This is the <strong>rendered output</strong> with <em>markdown formatting</em>.</p>
+  <ul>
+    <li>List item 1</li>
+    <li>List item 2</li>
+    <li>List item 3</li>
+  </ul>
+</div>
+```
+:::
