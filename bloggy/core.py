@@ -343,27 +343,45 @@ class ContentRenderer(FrankenRenderer):
         # Handle relative links (e.g., ./file.md, ../other/file.md, file.md)
         is_relative = not is_external and not is_absolute_internal
         
-        if is_relative and self.current_path:
+        # Always try to resolve relative links
+        if is_relative:
             # Resolve relative link based on current post path
             from pathlib import Path
-            current_dir = Path(self.current_path).parent
+            
+            original_href = href
             
             # Remove .md extension if present
             if href.endswith('.md'):
                 href = href[:-3]
             
-            # Resolve the relative path
-            resolved = (current_dir / href).resolve()
-            root = get_root_folder().resolve()
-            
-            try:
-                # Get relative path from root
-                rel_path = resolved.relative_to(root)
-                href = f'/posts/{rel_path}'
-                is_absolute_internal = True
-            except ValueError:
-                # Path is outside root folder, treat as external
+            if self.current_path:
+                # Get the root folder first
+                root = get_root_folder().resolve()
+                
+                # Build the full path to current file from root
+                current_file_full = root / self.current_path
+                current_dir = current_file_full.parent
+                
+                # Resolve the relative path from current directory
+                resolved = (current_dir / href).resolve()
+                
+                print(f"DEBUG: original_href={original_href}, current_path={self.current_path}, current_dir={current_dir}, resolved={resolved}, root={root}")
+                
+                try:
+                    # Get relative path from root
+                    rel_path = resolved.relative_to(root)
+                    href = f'/posts/{rel_path}'
+                    is_absolute_internal = True
+                    print(f"DEBUG: SUCCESS - rel_path={rel_path}, final href={href}")
+                except ValueError as e:
+                    # Path is outside root folder, treat as external
+                    is_external = True
+                    print(f"DEBUG: FAILED - ValueError: {e}")
+            else:
+                # If no current_path, can't properly resolve relative links
+                # Treat as external to avoid broken links
                 is_external = True
+                print(f"DEBUG: No current_path, treating as external")
         
         # Determine if this should have HTMX attributes (internal links without file extensions)
         is_internal = is_absolute_internal and '.' not in href.split('/')[-1]
