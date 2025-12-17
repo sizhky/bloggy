@@ -925,32 +925,32 @@ html {
     color-scheme: light !important;
     
     background: 
-        /* Under construction stripes - MUCH BRIGHTER */
+        /* Under construction stripes - Whiteish */
         repeating-linear-gradient(45deg, 
-            #ffff00 0px, 
-            #ffff00 20px, 
-            #ff00ff 20px, 
-            #ff00ff 40px
+            rgba(255, 255, 255, 0.9) 0px, 
+            rgba(255, 255, 255, 0.9) 20px, 
+            rgba(240, 240, 240, 0.7) 20px, 
+            rgba(240, 240, 240, 0.7) 40px
         ),
-        /* Spinning color wheel - SOLID COLORS */
+        /* Spinning color wheel - Pastel colors */
         repeating-conic-gradient(from 0deg, 
-            #ff00ff 0deg, 
-            #00ffff 30deg, 
-            #ffff00 60deg, 
-            #ff0000 90deg, 
-            #00ff00 120deg,
-            #0000ff 150deg,
-            #ff00ff 180deg
+            rgba(255, 200, 255, 0.3) 0deg, 
+            rgba(200, 255, 255, 0.3) 30deg, 
+            rgba(255, 255, 200, 0.3) 60deg, 
+            rgba(255, 220, 220, 0.3) 90deg, 
+            rgba(220, 255, 220, 0.3) 120deg,
+            rgba(220, 220, 255, 0.3) 150deg,
+            rgba(255, 200, 255, 0.3) 180deg
         ),
-        /* Starfield with BRIGHT visible stars */
-        radial-gradient(4px 4px at 20% 30%, #ffffff, transparent),
-        radial-gradient(3px 3px at 60% 70%, #00ffff, transparent),
-        radial-gradient(5px 5px at 50% 50%, #ff00ff, transparent),
-        radial-gradient(3px 3px at 80% 10%, #ffff00, transparent),
-        radial-gradient(4px 4px at 15% 85%, #00ff00, transparent),
-        radial-gradient(3px 3px at 90% 40%, #ff0000, transparent),
-        /* Bright colorful base instead of dark */
-        linear-gradient(135deg, #330066 0%, #003366 50%, #006633 100%) !important;
+        /* Starfield with white/light stars */
+        radial-gradient(4px 4px at 20% 30%, rgba(255, 255, 255, 0.9), transparent),
+        radial-gradient(3px 3px at 60% 70%, rgba(230, 250, 255, 0.7), transparent),
+        radial-gradient(5px 5px at 50% 50%, rgba(255, 245, 255, 0.8), transparent),
+        radial-gradient(3px 3px at 80% 10%, rgba(255, 255, 230, 0.7), transparent),
+        radial-gradient(4px 4px at 15% 85%, rgba(245, 255, 245, 0.6), transparent),
+        radial-gradient(3px 3px at 90% 40%, rgba(255, 245, 245, 0.7), transparent),
+        /* Light base */
+        linear-gradient(135deg, #e8e8f0 0%, #f0f0f8 50%, #f8f8ff 100%) !important;
     background-size: 
         100px 100px,
         250px 250px,
@@ -967,32 +967,32 @@ html {
 body {
     /* Apply the same background to body */
     background: 
-        /* Under construction stripes - MUCH BRIGHTER */
+        /* Under construction stripes - Whiteish */
         repeating-linear-gradient(45deg, 
-            #ffff00 0px, 
-            #ffff00 20px, 
-            #ff00ff 20px, 
-            #ff00ff 40px
+            rgba(255, 255, 255, 0.9) 0px, 
+            rgba(255, 255, 255, 0.9) 20px, 
+            rgba(240, 240, 240, 0.7) 20px, 
+            rgba(240, 240, 240, 0.7) 40px
         ),
-        /* Spinning color wheel - SOLID COLORS */
+        /* Spinning color wheel - Pastel colors */
         repeating-conic-gradient(from 0deg, 
-            #ff00ff 0deg, 
-            #00ffff 30deg, 
-            #ffff00 60deg, 
-            #ff0000 90deg, 
-            #00ff00 120deg,
-            #0000ff 150deg,
-            #ff00ff 180deg
+            rgba(255, 200, 255, 0.3) 0deg, 
+            rgba(200, 255, 255, 0.3) 30deg, 
+            rgba(255, 255, 200, 0.3) 60deg, 
+            rgba(255, 220, 220, 0.3) 90deg, 
+            rgba(220, 255, 220, 0.3) 120deg,
+            rgba(220, 220, 255, 0.3) 150deg,
+            rgba(255, 200, 255, 0.3) 180deg
         ),
-        /* Starfield with BRIGHT visible stars */
-        radial-gradient(4px 4px at 20% 30%, #ffffff, transparent),
-        radial-gradient(3px 3px at 60% 70%, #00ffff, transparent),
-        radial-gradient(5px 5px at 50% 50%, #ff00ff, transparent),
-        radial-gradient(3px 3px at 80% 10%, #ffff00, transparent),
-        radial-gradient(4px 4px at 15% 85%, #00ff00, transparent),
-        radial-gradient(3px 3px at 90% 40%, #ff0000, transparent),
-        /* Bright colorful base instead of dark */
-        linear-gradient(135deg, #330066 0%, #003366 50%, #006633 100%) !important;
+        /* Starfield with white/light stars */
+        radial-gradient(4px 4px at 20% 30%, rgba(255, 255, 255, 0.9), transparent),
+        radial-gradient(3px 3px at 60% 70%, rgba(230, 250, 255, 0.7), transparent),
+        radial-gradient(5px 5px at 50% 50%, rgba(255, 245, 255, 0.8), transparent),
+        radial-gradient(3px 3px at 80% 10%, rgba(255, 255, 230, 0.7), transparent),
+        radial-gradient(4px 4px at 15% 85%, rgba(245, 255, 245, 0.6), transparent),
+        radial-gradient(3px 3px at 90% 40%, rgba(255, 245, 245, 0.7), transparent),
+        /* Light base */
+        linear-gradient(135deg, #e8e8f0 0%, #f0f0f8 50%, #f8f8ff 100%) !important;
     background-size: 
         100px 100px,
         250px 250px,
