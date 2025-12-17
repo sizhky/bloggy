@@ -36,3 +36,8 @@ publish: bump-patch build
 
 publish-test: build
 	python -m twine upload --repository testpypi dist/*
+
+publish-and-checkpoint: publish
+	zsh -i -c "checkpoint"
+
+pc: publish-and-checkpoint
