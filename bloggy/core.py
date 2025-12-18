@@ -318,6 +318,7 @@ class ContentRenderer(FrankenRenderer):
             
             return f'''<div class="mermaid-container relative border-4 rounded-md my-4 shadow-2xl" style="{container_style}">
                 <div class="mermaid-controls absolute top-2 right-2 z-10 flex gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded">
+                    <button onclick="openMermaidFullscreen('{diagram_id}')" class="px-2 py-1 text-xs border rounded hover:bg-slate-100 dark:hover:bg-slate-700" title="Fullscreen">⛶</button>
                     <button onclick="resetMermaidZoom('{diagram_id}')" class="px-2 py-1 text-xs border rounded hover:bg-slate-100 dark:hover:bg-slate-700" title="Reset zoom">Reset</button>
                     <button onclick="zoomMermaidIn('{diagram_id}')" class="px-2 py-1 text-xs border rounded hover:bg-slate-100 dark:hover:bg-slate-700" title="Zoom in">+</button>
                     <button onclick="zoomMermaidOut('{diagram_id}')" class="px-2 py-1 text-xs border rounded hover:bg-slate-100 dark:hover:bg-slate-700" title="Zoom out">−</button>
@@ -781,9 +782,9 @@ def collapsible_sidebar(icon, title, items_list, is_open=True, show_reveal=False
         )
     
     # Sidebar styling configuration
-    common_frost_style = "bg-white/10 dark:bg-slate-950/70 backdrop-blur-sm border border-slate-200 dark:border-slate-800"
+    common_frost_style = "bg-white/10 dark:bg-slate-950/70 backdrop-blur-lg border border-slate-900/20 dark:border-slate-700/20 shadow-lg"
     summary_classes = f"flex items-center font-semibold cursor-pointer py-2 px-3 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-lg select-none list-none {common_frost_style} min-h-[56px]"
-    content_classes = f"p-3 {common_frost_style} rounded-lg border border-slate-200 dark:border-slate-800 overflow-y-auto max-h-[calc(100vh-18rem)]"
+    content_classes = f"p-3 {common_frost_style} rounded-lg border border-black dark:border-black overflow-y-auto max-h-[calc(100vh-18rem)]"
     
     return Details(
         Summary(*summary_content, cls=summary_classes),

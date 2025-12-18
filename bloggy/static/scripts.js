@@ -54,7 +54,7 @@ function initMermaidInteraction() {
             
             const zoomIntensity = 0.01;
             const delta = e.deltaY > 0 ? 1 - zoomIntensity : 1 + zoomIntensity; // Zoom out or in speed
-            const newScale = Math.min(Math.max(0.1, state.scale * delta), 10);
+            const newScale = Math.min(Math.max(0.1, state.scale * delta), 15);
             
             // Calculate how much to adjust translation to keep point under cursor fixed
             // With center origin, we need to account for the scale change around center
@@ -121,6 +121,91 @@ window.zoomMermaidOut = function(id) {
         const svg = document.getElementById(id).querySelector('svg');
         svg.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
     }
+};
+
+window.openMermaidFullscreen = function(id) {
+    const wrapper = document.getElementById(id);
+    if (!wrapper) return;
+    
+    const originalCode = wrapper.getAttribute('data-mermaid-code');
+    if (!originalCode) return;
+    
+    // Decode HTML entities
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = originalCode;
+    const code = textarea.value;
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.id = 'mermaid-fullscreen-modal';
+    modal.className = 'fixed inset-0 z-[10000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4';
+    modal.style.animation = 'fadeIn 0.2s ease-in';
+    
+    // Create modal content container
+    const modalContent = document.createElement('div');
+    modalContent.className = 'relative bg-white dark:bg-slate-900 rounded-lg shadow-2xl w-full h-full max-w-[95vw] max-h-[95vh] flex flex-col';
+    
+    // Create header with close button
+    const header = document.createElement('div');
+    header.className = 'flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700';
+    
+    const title = document.createElement('h3');
+    title.className = 'text-lg font-semibold text-slate-800 dark:text-slate-200';
+    title.textContent = 'Diagram';
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '✕';
+    closeBtn.className = 'px-3 py-1 text-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors';
+    closeBtn.title = 'Close (Esc)';
+    closeBtn.onclick = () => document.body.removeChild(modal);
+    
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+    
+    // Create diagram container
+    const diagramContainer = document.createElement('div');
+    diagramContainer.className = 'flex-1 overflow-auto p-4 flex items-center justify-center';
+    
+    const fullscreenId = `${id}-fullscreen`;
+    const fullscreenWrapper = document.createElement('div');
+    fullscreenWrapper.id = fullscreenId;
+    fullscreenWrapper.className = 'mermaid-wrapper w-full h-full flex items-center justify-center';
+    fullscreenWrapper.setAttribute('data-mermaid-code', originalCode);
+    
+    const pre = document.createElement('pre');
+    pre.className = 'mermaid';
+    pre.textContent = code;
+    fullscreenWrapper.appendChild(pre);
+    
+    diagramContainer.appendChild(fullscreenWrapper);
+    
+    // Assemble modal
+    modalContent.appendChild(header);
+    modalContent.appendChild(diagramContainer);
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    // Close on Esc key
+    const escHandler = (e) => {
+        if (e.key === 'Escape') {
+            document.body.removeChild(modal);
+            document.removeEventListener('keydown', escHandler);
+        }
+    };
+    document.addEventListener('keydown', escHandler);
+    
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+            document.removeEventListener('keydown', escHandler);
+        }
+    });
+    
+    // Render mermaid in the fullscreen view
+    mermaid.run({ nodes: [pre] }).then(() => {
+        setTimeout(() => initMermaidInteraction(), 100);
+    });
 };
 
 function getCurrentTheme() {
