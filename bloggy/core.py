@@ -1,13 +1,22 @@
 import re, frontmatter, mistletoe as mst, pathlib, os
 from functools import partial
+from functools import lru_cache
 from pathlib import Path
 from fasthtml.common import *
 from fasthtml.jupyter import *
 from monsterui.all import *
 from starlette.staticfiles import StaticFiles
 from .config import get_config
+from loguru import logger
+
+logfile = Path("/tmp/bloggy_core.log")
+logger.add(logfile, rotation="10 MB", retention="10 days", level="DEBUG")
 
 slug_to_title = lambda s: ' '.join(word.capitalize() for word in s.replace('-', ' ').replace('_', ' ').split())
+slug_to_title = lambda s: ' '.join(
+    word if word.isupper() else word[0].upper() + word[1:]
+    for word in s.replace('-', ' ').replace('_', ' ').split()
+)
 
 def text_to_anchor(text):
     """Convert text to anchor slug"""
@@ -18,6 +27,9 @@ _frontmatter_cache = {}
 
 def parse_frontmatter(file_path):
     """Parse frontmatter from a markdown file with caching"""
+    import time
+    start_time = time.time()
+    
     file_path = Path(file_path)
     cache_key = str(file_path)
     mtime = file_path.stat().st_mtime
@@ -25,6 +37,8 @@ def parse_frontmatter(file_path):
     if cache_key in _frontmatter_cache:
         cached_mtime, cached_data = _frontmatter_cache[cache_key]
         if cached_mtime == mtime:
+            elapsed = (time.time() - start_time) * 1000
+            logger.debug(f"[DEBUG] parse_frontmatter CACHE HIT for {file_path.name} ({elapsed:.2f}ms)")
             return cached_data
     
     try:
@@ -32,6 +46,8 @@ def parse_frontmatter(file_path):
             post = frontmatter.load(f)
             result = (post.metadata, post.content)
             _frontmatter_cache[cache_key] = (mtime, result)
+            elapsed = (time.time() - start_time) * 1000
+            logger.debug(f"[DEBUG] parse_frontmatter READ FILE {file_path.name} ({elapsed:.2f}ms)")
             return result
     except Exception as e:
         print(f"Error parsing frontmatter from {file_path}: {e}")
@@ -368,23 +384,23 @@ class ContentRenderer(FrankenRenderer):
                 # Resolve the relative path from current directory
                 resolved = (current_dir / href).resolve()
                 
-                print(f"DEBUG: original_href={original_href}, current_path={self.current_path}, current_dir={current_dir}, resolved={resolved}, root={root}")
+                logger.debug(f"DEBUG: original_href={original_href}, current_path={self.current_path}, current_dir={current_dir}, resolved={resolved}, root={root}")
                 
                 try:
                     # Get relative path from root
                     rel_path = resolved.relative_to(root)
                     href = f'/posts/{rel_path}'
                     is_absolute_internal = True
-                    print(f"DEBUG: SUCCESS - rel_path={rel_path}, final href={href}")
+                    logger.debug(f"DEBUG: SUCCESS - rel_path={rel_path}, final href={href}")
                 except ValueError as e:
                     # Path is outside root folder, treat as external
                     is_external = True
-                    print(f"DEBUG: FAILED - ValueError: {e}")
+                    logger.debug(f"DEBUG: FAILED - ValueError: {e}")
             else:
                 # If no current_path, can't properly resolve relative links
                 # Treat as external to avoid broken links
                 is_external = True
-                print(f"DEBUG: No current_path, treating as external")
+                logger.debug(f"DEBUG: No current_path, treating as external")
         
         # Determine if this should have HTMX attributes (internal links without file extensions)
         is_internal = is_absolute_internal and '.' not in href.split('/')[-1]
@@ -755,6 +771,24 @@ def navbar(show_mobile_menus=False):
     return Div(left_section, right_section,
                cls="flex items-center justify-between bg-slate-900 text-white p-4 my-4 rounded-lg shadow-md dark:bg-slate-800")
 
+def _posts_sidebar_fingerprint():
+    root = get_root_folder()
+    try:
+        return max((p.stat().st_mtime for p in root.rglob("*.md")), default=0)
+    except Exception:
+        return 0
+
+@lru_cache(maxsize=1)
+def _cached_posts_sidebar_html(fingerprint):
+    sidebar = collapsible_sidebar(
+        "menu",
+        "Posts",
+        get_posts(),
+        is_open=True,
+        show_reveal=True
+    )
+    return to_xml(sidebar)
+
 def collapsible_sidebar(icon, title, items_list, is_open=True, show_reveal=False):
     """Reusable collapsible sidebar component with sticky header"""
     # Build the summary content
@@ -876,35 +910,92 @@ def get_custom_css_links(current_path=None, section_class=None):
     return css_elements
 
 def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, current_path=None):
+    import time
+    layout_start_time = time.time()
+    logger.debug("[LAYOUT] layout() start")
     # Generate section class for CSS scoping (will be used by get_custom_css_links if needed)
-    section_class = f"section-{current_path.replace('/', '-')}" if current_path else None
-    
+    section_class = f"section-{current_path.replace('/', '-')}" if current_path else ""
+    t_section = time.time()
+    logger.debug(f"[LAYOUT] section_class computed in {(t_section - layout_start_time)*1000:.2f}ms")
+
+    # HTMX short-circuit: build only swappable fragments, never build full page chrome/sidebars tree
+    if htmx and getattr(htmx, "request", None):
+        if show_sidebar:
+            toc_items = build_toc_items(extract_toc(toc_content)) if toc_content else []
+            t_toc = time.time()
+            logger.debug(f"[LAYOUT] TOC built in {(t_toc - t_section)*1000:.2f}ms")
+
+            toc_attrs = {
+                "cls": "hidden md:block w-72 shrink-0 sticky top-24 self-start max-h-[calc(100vh-10rem)] overflow-hidden z-[1000]",
+                "id": "toc-sidebar",
+                "hx_swap_oob": "true",
+            }
+            toc_sidebar = Aside(
+                collapsible_sidebar("list", "Contents", toc_items, is_open=True) if toc_items else Div(),
+                **toc_attrs
+            )
+
+            custom_css_links = get_custom_css_links(current_path, section_class)
+            t_css = time.time()
+            logger.debug(f"[LAYOUT] Custom CSS resolved in {(t_css - t_toc)*1000:.2f}ms")
+
+            main_content_container = Main(*content, cls=f"flex-1 min-w-0 px-6 py-8 space-y-8 {section_class}", id="main-content")
+            t_main = time.time()
+            logger.debug(f"[LAYOUT] Main content container built in {(t_main - t_css)*1000:.2f}ms")
+
+            result = [Title(title)]
+            if custom_css_links:
+                result.append(Div(*custom_css_links, id="scoped-css-container", hx_swap_oob="true"))
+            else:
+                result.append(Div(id="scoped-css-container", hx_swap_oob="true"))
+            result.extend([main_content_container, toc_sidebar])
+
+            t_htmx = time.time()
+            logger.debug(f"[LAYOUT] HTMX response assembled in {(t_htmx - t_main)*1000:.2f}ms")
+            logger.debug(f"[LAYOUT] TOTAL layout() time {(t_htmx - layout_start_time)*1000:.2f}ms")
+            return tuple(result)
+
+        # HTMX without sidebar
+        custom_css_links = get_custom_css_links(current_path, section_class) if current_path else []
+        t_css = time.time()
+        logger.debug(f"[LAYOUT] Custom CSS resolved in {(t_css - t_section)*1000:.2f}ms")
+
+        result = [Title(title)]
+        if custom_css_links:
+            result.append(Div(*custom_css_links, id="scoped-css-container", hx_swap_oob="true"))
+        else:
+            result.append(Div(id="scoped-css-container", hx_swap_oob="true"))
+        result.extend(content)
+
+        t_htmx = time.time()
+        logger.debug(f"[LAYOUT] HTMX response assembled in {(t_htmx - layout_start_time)*1000:.2f}ms")
+        logger.debug(f"[LAYOUT] TOTAL layout() time {(t_htmx - layout_start_time)*1000:.2f}ms")
+        return tuple(result)
+
     if show_sidebar:
         # Build TOC if content provided
         toc_items = build_toc_items(extract_toc(toc_content)) if toc_content else []
-        
+        t_toc = time.time()
+        logger.debug(f"[LAYOUT] TOC built in {(t_toc - t_section)*1000:.2f}ms")
         # Right sidebar TOC component with out-of-band swap for HTMX
         toc_attrs = {
             "cls": "hidden md:block w-72 shrink-0 sticky top-24 self-start max-h-[calc(100vh-10rem)] overflow-hidden z-[1000]",
             "id": "toc-sidebar"
         }
-        if htmx and htmx.request:
-            toc_attrs["hx_swap_oob"] = "true"
-        
         toc_sidebar = Aside(
             collapsible_sidebar("list", "Contents", toc_items, is_open=True) if toc_items else Div(),
             **toc_attrs
         )
-        
         # Container for main content only (for HTMX swapping)
         # Add section class to identify the section for CSS scoping
         section_class = f"section-{current_path.replace('/', '-')}" if current_path else ""
-        
         # Get custom CSS with folder-specific CSS automatically scoped
         custom_css_links = get_custom_css_links(current_path, section_class)
-        
+        t_css = time.time()
+        logger.debug(f"[LAYOUT] Custom CSS resolved in {(t_css - t_toc)*1000:.2f}ms")
         main_content_container = Main(*content, cls=f"flex-1 min-w-0 px-6 py-8 space-y-8 {section_class}", id="main-content")
-        
+        t_main = time.time()
+        logger.debug(f"[LAYOUT] Main content container built in {(t_main - t_css)*1000:.2f}ms")
         # Mobile overlay panels for posts and TOC
         mobile_posts_panel = Div(
             Div(
@@ -917,13 +1008,12 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
                 cls="flex justify-end p-2 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800"
             ),
             Div(
-                collapsible_sidebar("menu", "Posts", get_posts(), is_open=True, show_reveal=True),
+                NotStr(_cached_posts_sidebar_html(_posts_sidebar_fingerprint())),
                 cls="p-4 overflow-y-auto"
             ),
             id="mobile-posts-panel",
             cls="fixed inset-0 bg-white dark:bg-slate-950 z-[9999] md:hidden transform -translate-x-full transition-transform duration-300"
         )
-        
         mobile_toc_panel = Div(
             Div(
                 Button(
@@ -941,12 +1031,11 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
             id="mobile-toc-panel",
             cls="fixed inset-0 bg-white dark:bg-slate-950 z-[9999] md:hidden transform translate-x-full transition-transform duration-300"
         )
-        
         # Full layout with all sidebars
         content_with_sidebars = Div(cls="w-full max-w-7xl mx-auto px-4 flex gap-6 flex-1")(
             # Left sidebar - collapsible post list (stays static, JS updates active state)
             Aside(
-                collapsible_sidebar("menu", "Posts", get_posts(), is_open=True, show_reveal=True),
+                NotStr(_cached_posts_sidebar_html(_posts_sidebar_fingerprint())),
                 cls="hidden md:block w-72 shrink-0 sticky top-24 self-start max-h-[calc(100vh-10rem)] overflow-hidden z-[1000]",
                 id="posts-sidebar"
             ),
@@ -955,7 +1044,8 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
             # Right sidebar - TOC (swappable out-of-band)
             toc_sidebar
         )
-        
+        t_sidebars = time.time()
+        logger.debug(f"[LAYOUT] Sidebars container built in {(t_sidebars - t_main)*1000:.2f}ms")
         # Layout with sidebar for blog posts
         body_content = Div(id="page-container", cls="flex flex-col min-h-screen")(
             Div(navbar(show_mobile_menus=True), cls="w-full max-w-7xl mx-auto px-4 sticky top-0 z-50 mt-4"),
@@ -965,45 +1055,17 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
             Footer(Div(f"Powered by Bloggy", cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), # right justified footer
                    cls="w-full max-w-7xl mx-auto px-6 mt-auto mb-6")
         )
-        
-        # For HTMX requests, return main content + TOC with out-of-band swap (Posts sidebar stays static)
-        if htmx and htmx.request:
-            result = [Title(title)]
-            # Add scoped CSS in a swappable container with out-of-band swap
-            # This ensures old scoped CSS gets replaced, preventing accumulation
-            if custom_css_links:
-                css_container = Div(*custom_css_links, id="scoped-css-container", hx_swap_oob="true")
-                result.append(css_container)
-            else:
-                # If no custom CSS for this page, send empty container to clear previous CSS
-                css_container = Div(id="scoped-css-container", hx_swap_oob="true")
-                result.append(css_container)
-            result.extend([main_content_container, toc_sidebar])
-            return tuple(result)
-        
     else:
         # Default layout without sidebar
+        custom_css_links = get_custom_css_links(current_path, section_class) if current_path else []
         body_content = Div(id="page-container", cls="flex flex-col min-h-screen")(
             Div(navbar(), cls="w-full max-w-2xl mx-auto px-4 sticky top-0 z-50 mt-4"),
             Main(*content, cls="w-full max-w-2xl mx-auto px-6 py-8 space-y-8", id="main-content"),
             Footer(Div("Powered by Bloggy", cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), 
                    cls="w-full max-w-2xl mx-auto px-6 mt-auto mb-6")
         )
-        
-        # For HTMX requests without sidebar
-        if htmx and htmx.request:
-            result = [Title(title)]
-            # Add scoped CSS in a swappable container with out-of-band swap
-            if custom_css_links:
-                css_container = Div(*custom_css_links, id="scoped-css-container", hx_swap_oob="true")
-                result.append(css_container)
-            else:
-                # If no custom CSS for this page, send empty container to clear previous CSS
-                css_container = Div(id="scoped-css-container", hx_swap_oob="true")
-                result.append(css_container)
-            result.extend(content)
-            return tuple(result)
-    
+        t_body = time.time()
+        logger.debug(f"[LAYOUT] Body content (no sidebar) built in {(t_body - layout_start_time)*1000:.2f}ms")
     # For full page loads, return complete page
     result = [Title(title)]
     # Wrap custom CSS in a container so HTMX can swap it out later
@@ -1015,13 +1077,20 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
         css_container = Div(id="scoped-css-container")
         result.append(css_container)
     result.append(body_content)
+    t_end = time.time()
+    logger.debug(f"[LAYOUT] FULL PAGE assembled in {(t_end - layout_start_time)*1000:.2f}ms")
     return tuple(result)
 
 def build_post_tree(folder):
+    import time
+    start_time = time.time()
     root = get_root_folder()
     items = []
-    try: entries = sorted(folder.iterdir(), key=lambda x: (not x.is_dir(), x.name))
-    except (OSError, PermissionError): return items
+    try: 
+        entries = sorted(folder.iterdir(), key=lambda x: (not x.is_dir(), x.name))
+        logger.debug(f"[DEBUG] Scanning directory: {folder.relative_to(root) if folder != root else '.'} - found {len(entries)} entries")
+    except (OSError, PermissionError): 
+        return items
     
     for item in entries:
         if item.is_dir():
@@ -1044,7 +1113,11 @@ def build_post_tree(folder):
                     continue
             
             slug = str(item.relative_to(root).with_suffix(''))
+            title_start = time.time()
             title = get_post_title(item)
+            title_time = (time.time() - title_start) * 1000
+            if title_time > 1:  # Only log if it takes more than 1ms
+                logger.debug(f"[DEBUG] Getting title for {item.name} took {title_time:.2f}ms")
             items.append(Li(A(
                 Span(cls="w-4 mr-2 shrink-0"),
                 Span(UkIcon("file-text", cls="text-slate-400 w-4 h-4"), cls="w-4 mr-2 flex items-center justify-center shrink-0"),
@@ -1053,9 +1126,25 @@ def build_post_tree(folder):
                 hx_get=f'/posts/{slug}', hx_target="#main-content", hx_push_url="true", hx_swap="outerHTML show:window:top settle:0.1s",
                 cls="post-link flex items-center py-1 px-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors min-w-0",
                 data_path=slug)))
+    
+    elapsed = (time.time() - start_time) * 1000
+    logger.debug(f"[DEBUG] build_post_tree for {folder.relative_to(root) if folder != root else '.'} completed in {elapsed:.2f}ms")
     return items
 
-def get_posts(): return build_post_tree(get_root_folder())
+def _posts_tree_fingerprint():
+    root = get_root_folder()
+    try:
+        return max((p.stat().st_mtime for p in root.rglob("*.md")), default=0)
+    except Exception:
+        return 0
+
+@lru_cache(maxsize=1)
+def _cached_build_post_tree(fingerprint):
+    return build_post_tree(get_root_folder())
+
+def get_posts():
+    fingerprint = _posts_tree_fingerprint()
+    return _cached_build_post_tree(fingerprint)
 
 def not_found(htmx=None):
     """Custom 404 error page"""
@@ -1115,6 +1204,10 @@ def not_found(htmx=None):
 
 @rt('/posts/{path:path}')
 def post_detail(path: str, htmx):
+    import time
+    request_start = time.time()
+    print(f"\n[DEBUG] ########## REQUEST START: /posts/{path} ##########")
+    
     file_path = get_root_folder() / f'{path}.md'
     
     # Check if file exists
@@ -1127,12 +1220,24 @@ def post_detail(path: str, htmx):
     post_title = metadata.get('title', slug_to_title(path.split('/')[-1]))
     
     # Render the markdown content with current path for relative link resolution
+    md_start = time.time()
     content = from_md(raw_content, current_path=path)
+    md_time = (time.time() - md_start) * 1000
+    logger.debug(f"[DEBUG] Markdown rendering took {md_time:.2f}ms")
+    
     post_content = Div(H1(post_title, cls="text-4xl font-bold mb-8"), content)
     
     # Always return complete layout with sidebar and TOC
-    return layout(post_content, htmx=htmx, title=f"{post_title} - {get_blog_title()}", 
+    layout_start = time.time()
+    result = layout(post_content, htmx=htmx, title=f"{post_title} - {get_blog_title()}", 
                   show_sidebar=True, toc_content=raw_content, current_path=path)
+    layout_time = (time.time() - layout_start) * 1000
+    logger.debug(f"[DEBUG] Layout generation took {layout_time:.2f}ms")
+    
+    total_time = (time.time() - request_start) * 1000
+    logger.debug(f"[DEBUG] ########## REQUEST COMPLETE: {total_time:.2f}ms TOTAL ##########\n")
+    
+    return result
 
 def find_index_file():
     """Find index.md or readme.md (case insensitive) in root folder"""
@@ -1152,6 +1257,10 @@ def find_index_file():
 
 @rt
 def index(htmx):
+    import time
+    request_start = time.time()
+    print(f"\n[DEBUG] ########## REQUEST START: / (index) ##########")
+    
     blog_title = get_blog_title()
     
     # Try to find index.md or readme.md
@@ -1165,11 +1274,21 @@ def index(htmx):
         index_path = str(index_file.relative_to(get_root_folder()).with_suffix(''))
         content = from_md(raw_content, current_path=index_path)
         page_content = Div(H1(page_title, cls="text-4xl font-bold mb-8"), content)
-        return layout(page_content, htmx=htmx, title=f"{page_title} - {blog_title}", 
+        
+        layout_start = time.time()
+        result = layout(page_content, htmx=htmx, title=f"{page_title} - {blog_title}", 
                       show_sidebar=True, toc_content=raw_content, current_path=index_path)
+        layout_time = (time.time() - layout_start) * 1000
+        logger.debug(f"[DEBUG] Layout generation took {layout_time:.2f}ms")
+        
+        total_time = (time.time() - request_start) * 1000
+        logger.debug(f"[DEBUG] ########## REQUEST COMPLETE: {total_time:.2f}ms TOTAL ##########\n")
+        
+        return result
     else:
         # Default welcome message
-        return layout(Div(
+        layout_start = time.time()
+        result = layout(Div(
             H1(f"Welcome to {blog_title}!", cls="text-4xl font-bold tracking-tight mb-8"),
             P("Your personal blogging platform.", cls="text-lg text-slate-600 dark:text-slate-400 mb-4"),
             P("Browse your posts using the sidebar, or create an ", 
@@ -1177,6 +1296,13 @@ def index(htmx):
               " file in your blog directory to customize this page.", 
               cls="text-base text-slate-600 dark:text-slate-400"),
             cls="w-full"), htmx=htmx, title=f"Home - {blog_title}", show_sidebar=True)
+        layout_time = (time.time() - layout_start) * 1000
+        logger.debug(f"[DEBUG] Layout generation took {layout_time:.2f}ms")
+        
+        total_time = (time.time() - request_start) * 1000
+        logger.debug(f"[DEBUG] ########## REQUEST COMPLETE: {total_time:.2f}ms TOTAL ##########\n")
+        
+        return result
 
 # Catch-all route for 404 pages (must be last)
 @rt('/{path:path}')
