@@ -748,18 +748,16 @@ async def login(request: Request):
             return RedirectResponse("/", status_code=303)
         else:
             error = "Invalid username or password."
+
     return Div(
         H2("Login", cls="uk-h2"),
-        P("Enter your credentials to access the site."),
         Form(
             Div(
-                Label("Username", htmlFor="username"),
-                Input(type="text", name="username", required=True, id="username", cls="uk-input input input-bordered w-full"),
-                cls="mb-4"),
+                Input(type="text", name="username", required=True, id="username", cls="uk-input input input-bordered w-full", placeholder="Username"),
+                cls="my-4"),
             Div(
-                Label("Password", htmlFor="password"),
-                Input(type="password", name="password", required=True, id="password", cls="uk-input input input-bordered w-full"),
-                cls="mb-4"),
+                Input(type="password", name="password", required=True, id="password", cls="uk-input input input-bordered w-full", placeholder="Password"),
+                cls="my-4"),
             Button("Login", type="submit", cls="uk-btn btn btn-primary w-full"),
             enctype="multipart/form-data", method="post", cls="max-w-sm mx-auto"),
         P(error, cls="text-red-500 mt-4") if error else None,
