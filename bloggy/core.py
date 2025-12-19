@@ -10,6 +10,9 @@ from starlette.staticfiles import StaticFiles
 from .config import get_config
 from loguru import logger
 
+# disable debug level logs to stdout
+logger.remove()
+logger.add(sys.stdout, level="INFO")
 logfile = Path("/tmp/bloggy_core.log")
 logger.add(logfile, rotation="10 MB", retention="10 days", level="DEBUG")
 
@@ -706,22 +709,56 @@ hdrs = (
             font-family: 'IBM Plex Mono', monospace;
         }
     """),
-    Script("if(!localStorage.__FRANKEN__) localStorage.__FRANKEN__ = JSON.stringify({mode: 'light'})"))
+    # Script("if(!localStorage.__FRANKEN__) localStorage.__FRANKEN__ = JSON.stringify({mode: 'light'})"))
+    Script("""
+        (function () {
+            let franken = localStorage.__FRANKEN__
+                ? JSON.parse(localStorage.__FRANKEN__)
+                : { mode: 'light' };
+
+            if (franken.mode === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+
+            localStorage.__FRANKEN__ = JSON.stringify(franken);
+        })();
+        """)
+    )
 
 
-# Session/cookie-based authentication using Beforeware
+# Session/cookie-based authentication using Beforeware (conditionally enabled)
 def user_auth_before(req, sess):
+    logger.info(f'Authenticating request for {req.url.path}')
     auth = req.scope['auth'] = sess.get('auth', None)
     if not auth:
+        sess['next'] = req.url.path
         from starlette.responses import RedirectResponse
         return RedirectResponse('/login', status_code=303)
 
-beforeware = Beforeware(
-    user_auth_before,
-    skip=[r'/favicon\.ico', r'/static/.*', r'.*\.css', r'.*\.js', r'^/login$', r'/public.*', r'/']
-)
+# Enable auth only if username and password are configured
+_config = get_config()
+_auth_creds = _config.get_auth()
+logger.info(f"Authentication enabled: {_auth_creds is not None and _auth_creds[0] and _auth_creds[1]}")
 
-app = FastHTML(hdrs=hdrs, before=beforeware)
+if _auth_creds and _auth_creds[0] and _auth_creds[1]:
+    beforeware = Beforeware(
+        user_auth_before,
+        skip=[
+            r'^/login$',
+            r'^/_sidebar/.*',
+            r'^/static/.*',
+            r'.*\.css',
+            r'.*\.js',
+        ]
+    )
+else:
+    beforeware = None
+
+logger.info(f'{beforeware=}')
+
+app = FastHTML(hdrs=hdrs, before=beforeware) if beforeware else FastHTML(hdrs=hdrs)
 
 static_dir = Path(__file__).parent / "static"
 
@@ -738,6 +775,7 @@ from starlette.responses import RedirectResponse
 async def login(request: Request):
     config = get_config()
     user, pwd = config.get_auth()
+    logger.info(f"Login attempt for user: {user}")
     error = None
     if request.method == "POST":
         form = await request.form()
@@ -745,7 +783,8 @@ async def login(request: Request):
         password = form.get("password", "")
         if username == user and password == pwd:
             request.session["auth"] = username
-            return RedirectResponse("/", status_code=303)
+            next_url = request.session.pop("next", "/")
+            return RedirectResponse(next_url, status_code=303)
         else:
             error = "Invalid username or password."
 
@@ -1274,7 +1313,7 @@ def not_found(htmx=None):
 def post_detail(path: str, htmx):
     import time
     request_start = time.time()
-    print(f"\n[DEBUG] ########## REQUEST START: /posts/{path} ##########")
+    logger.info(f"\n[DEBUG] ########## REQUEST START: /posts/{path} ##########")
     
     file_path = get_root_folder() / f'{path}.md'
     
@@ -1327,7 +1366,7 @@ def find_index_file():
 def index(htmx):
     import time
     request_start = time.time()
-    print(f"\n[DEBUG] ########## REQUEST START: / (index) ##########")
+    logger.info(f"\n[DEBUG] ########## REQUEST START: / (index) ##########")
     
     blog_title = get_blog_title()
     
