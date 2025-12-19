@@ -55,6 +55,8 @@ def cli():
     parser.add_argument('--host', help='Server host (default: 127.0.0.1, use 0.0.0.0 for all interfaces)')
     parser.add_argument('--port', type=int, help='Server port (default: 5001)')
     parser.add_argument('--no-reload', action='store_true', help='Disable auto-reload')
+    parser.add_argument('--user', help='Login username (overrides config/env)')
+    parser.add_argument('--password', help='Login password (overrides config/env)')
     
     args = parser.parse_args()
     
@@ -74,14 +76,20 @@ def cli():
     host = args.host or config.get_host()
     port = args.port or config.get_port()
     reload = not args.no_reload
-    
+
+    # Set login credentials from CLI if provided
+    if args.user:
+        os.environ['BLOGGY_USER'] = args.user
+    if args.password:
+        os.environ['BLOGGY_PASSWORD'] = args.password
+
     print(f"Starting Bloggy server...")
     print(f"Blog root: {config.get_root_folder()}")
     print(f"Blog title: {config.get_blog_title()}")
     print(f"Serving at: http://{host}:{port}")
     if host == '0.0.0.0':
         print(f"Server accessible from network at: http://<your-ip>:{port}")
-    
+
     uvicorn.run("bloggy.main:app", host=host, port=port, reload=reload)
 
 if __name__ == "__main__":

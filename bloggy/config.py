@@ -15,6 +15,7 @@ from typing import Optional
 
 
 class BloggyConfig:
+
     """Configuration handler for Bloggy."""
     
     def __init__(self, config_path: Optional[Path] = None):
@@ -105,6 +106,13 @@ class BloggyConfig:
         """Get the server port."""
         port = self.get('port', 'BLOGGY_PORT', 5001)
         return int(port)
+    
+    def get_auth(self):
+        """Get authentication credentials from config, env, or default (None)."""
+        user = self.get('username', 'BLOGGY_USER', None)
+        pwd = self.get('password', 'BLOGGY_PASSWORD', None)
+        return user, pwd
+
 
 
 # Global config instance

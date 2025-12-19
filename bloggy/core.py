@@ -3,6 +3,7 @@ from functools import partial
 from functools import lru_cache
 from pathlib import Path
 from fasthtml.common import *
+from fasthtml.authmw import user_pwd_auth
 from fasthtml.jupyter import *
 from monsterui.all import *
 from starlette.staticfiles import StaticFiles
@@ -707,10 +708,31 @@ hdrs = (
     """),
     Script("if(!localStorage.__FRANKEN__) localStorage.__FRANKEN__ = JSON.stringify({mode: 'light'})"))
 
-app = FastHTML(hdrs=hdrs)
+def get_auth_middleware():
+    config = get_config()
+    user, pwd = config.get_auth()
+    if user and pwd:
+        return [user_pwd_auth({user: pwd}, skip=[r"/static.*", r"/login", r"/public.*", r"/favicon.*"])]
+    return []
+
+app = FastHTML(hdrs=hdrs, middleware=get_auth_middleware())
+
 static_dir = Path(__file__).parent / "static"
-if static_dir.exists(): app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
 rt = app.route
+
+
+@rt("/login")
+def login():
+    # Simple login page (shown if not authenticated)
+    return Div([
+        H2("Login Required"),
+        P("Please authenticate using HTTP Basic Auth."),
+        P("Tip: You can set credentials via .bloggy, env vars, or CLI --user/--password."),
+    ], cls="prose mx-auto mt-24 text-center")
 
 # Progressive sidebar loading: lazy posts sidebar endpoint
 @rt("/_sidebar/posts")
