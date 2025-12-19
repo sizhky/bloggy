@@ -3,7 +3,7 @@ from functools import partial
 from functools import lru_cache
 from pathlib import Path
 from fasthtml.common import *
-from fasthtml.authmw import user_pwd_auth
+from fasthtml.common import Beforeware
 from fasthtml.jupyter import *
 from monsterui.all import *
 from starlette.staticfiles import StaticFiles
@@ -708,15 +708,20 @@ hdrs = (
     """),
     Script("if(!localStorage.__FRANKEN__) localStorage.__FRANKEN__ = JSON.stringify({mode: 'light'})"))
 
-def get_auth_middleware():
-    config = get_config()
-    user, pwd = config.get_auth()
-    if user and pwd:
-        # Skip /login for auth middleware so browser popup does not appear
-        return [user_pwd_auth({user: pwd}, skip=[r"/static.*", r"^/login$", r"/public.*", r"/favicon.*"])]
-    return []
 
-app = FastHTML(hdrs=hdrs, middleware=get_auth_middleware())
+# Session/cookie-based authentication using Beforeware
+def user_auth_before(req, sess):
+    auth = req.scope['auth'] = sess.get('auth', None)
+    if not auth:
+        from starlette.responses import RedirectResponse
+        return RedirectResponse('/login', status_code=303)
+
+beforeware = Beforeware(
+    user_auth_before,
+    skip=[r'/favicon\.ico', r'/static/.*', r'.*\.css', r'.*\.js', r'^/login$', r'/public.*', r'/']
+)
+
+app = FastHTML(hdrs=hdrs, before=beforeware)
 
 static_dir = Path(__file__).parent / "static"
 
@@ -748,17 +753,16 @@ async def login(request: Request):
         P("Enter your credentials to access the site."),
         Form(
             Div(
-                Label("Username", htmlFor="username", cls="uk-label"),
+                Label("Username", htmlFor="username"),
                 Input(type="text", name="username", required=True, id="username", cls="uk-input input input-bordered w-full"),
                 cls="mb-4"),
             Div(
-                Label("Password", htmlFor="password", cls="uk-label"),
+                Label("Password", htmlFor="password"),
                 Input(type="password", name="password", required=True, id="password", cls="uk-input input input-bordered w-full"),
                 cls="mb-4"),
             Button("Login", type="submit", cls="uk-btn btn btn-primary w-full"),
             enctype="multipart/form-data", method="post", cls="max-w-sm mx-auto"),
         P(error, cls="text-red-500 mt-4") if error else None,
-        P("Tip: You can set credentials via .bloggy, env vars, or CLI --user/--password.", cls="mt-4 text-sm text-gray-500"),
         cls="prose mx-auto mt-24 text-center")
 
 # Progressive sidebar loading: lazy posts sidebar endpoint
