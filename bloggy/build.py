@@ -374,7 +374,7 @@ def build_post_tree_static(folder, root_folder):
                         Span(UkIcon("folder", cls="text-blue-500 w-4 h-4"), cls="w-4 mr-2 flex items-center justify-center shrink-0"),
                         Span(folder_title, cls="truncate min-w-0", title=folder_title),
                         cls="flex items-center font-medium cursor-pointer py-1 px-2 hover:text-blue-600 select-none list-none rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-w-0"),
-                    Ul(*sub_items, cls="ml-2 pl-2 space-y-1 border-l border-slate-100 dark:border-slate-800"),
+                    Ul(*sub_items, cls="ml-4 pl-2 space-y-1 border-l border-slate-100 dark:border-slate-800"),
                     data_folder="true"), cls="my-1"))
         elif item.suffix == '.md':
             slug = str(item.relative_to(root_folder).with_suffix(''))

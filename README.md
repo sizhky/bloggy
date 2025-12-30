@@ -570,6 +570,24 @@ password = "hunter2"
 
 All settings in the `.bloggy` file are optional. The configuration is managed by the `Config` class in `bloggy/config.py`.
 
+### Custom Sidebar Ordering
+
+Place a `.bloggy` file in any folder to control the sidebar order for that folder. `.bloggy` uses TOML format. Use `order` to pin items first, then `sort` and `folders_first` for the remainder.
+
+```toml
+# Items listed in order are shown first. Use exact names (include extensions).
+order = ["todo.md", "static-build.md", "docs"]
+
+# Sorting for items not listed in order
+sort = "name_asc"          # name_asc, name_desc, mtime_asc, mtime_desc
+folders_first = true
+folders_always_first = false
+```
+
+Notes:
+- `folders_first` only affects the items not listed in `order`.
+- `folders_always_first` moves all folders to the top after ordering/sorting, while preserving their relative order.
+
 ### Environment Variables
 
 You can also use environment variables as a fallback:

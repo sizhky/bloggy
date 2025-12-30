@@ -1,7 +1,5 @@
 # Sidebar/post ordering for this folder
 # Items listed in order are shown first; remaining items follow sort/folders_first.
-order:
-  - todo
-  - static-build
-sort: name_asc
-folders_first: false
+order = ["todo.md", "static-build.md", "PUBLISHING.md"]
+sort = "name_asc"
+folders_first = false

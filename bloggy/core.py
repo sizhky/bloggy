@@ -1,4 +1,4 @@
-import re, frontmatter, mistletoe as mst, pathlib, os
+import re, frontmatter, mistletoe as mst, pathlib, os, tomllib
 from functools import partial
 from functools import lru_cache
 from pathlib import Path
@@ -66,67 +66,17 @@ def get_post_title(file_path):
 def _cached_bloggy_config(path_str, mtime):
     path = Path(path_str)
     try:
-        content = path.read_text(encoding="utf-8")
+        with path.open("rb") as f:
+            return tomllib.load(f)
     except Exception:
         return {}
-
-    parsed = None
-    try:
-        import yaml
-        parsed = yaml.safe_load(content)
-    except Exception:
-        parsed = None
-
-    if isinstance(parsed, dict):
-        return parsed
-    return _parse_bloggy_simple(content)
-
-def _parse_bloggy_simple(content):
-    config = {}
-    current_key = None
-    for line in content.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        if stripped.startswith("-") and current_key == "order":
-            value = stripped[1:].strip()
-            if value:
-                config.setdefault("order", []).append(value)
-            continue
-        if ":" in stripped:
-            key, value = stripped.split(":", 1)
-            key = key.strip()
-            value = value.strip()
-            current_key = key
-            if not value:
-                if key == "order":
-                    config.setdefault("order", [])
-                continue
-            if key == "order":
-                config[key] = _parse_bloggy_list(value)
-            else:
-                config[key] = _parse_bloggy_scalar(value)
-            continue
-        current_key = None
-    return config
-
-def _parse_bloggy_list(value):
-    raw = value.strip()
-    if raw.startswith("[") and raw.endswith("]"):
-        raw = raw[1:-1]
-    return [item.strip() for item in raw.split(",") if item.strip()]
-
-def _parse_bloggy_scalar(value):
-    lowered = value.lower()
-    if lowered in ("true", "false"):
-        return lowered == "true"
-    return value
 
 def _normalize_bloggy_config(parsed):
     config = {
         "order": [],
         "sort": "name_asc",
         "folders_first": True,
+        "folders_always_first": False,
     }
     if not isinstance(parsed, dict):
         return config
@@ -136,7 +86,7 @@ def _normalize_bloggy_config(parsed):
         if isinstance(order, (list, tuple)):
             config["order"] = [str(item).strip() for item in order if str(item).strip()]
         else:
-            config["order"] = _parse_bloggy_list(str(order))
+            config["order"] = []
 
     sort = parsed.get("sort")
     if isinstance(sort, str) and sort in ("name_asc", "name_desc", "mtime_asc", "mtime_desc"):
@@ -149,6 +99,14 @@ def _normalize_bloggy_config(parsed):
         lowered = folders_first.lower()
         if lowered in ("true", "false"):
             config["folders_first"] = lowered == "true"
+
+    folders_always_first = parsed.get("folders_always_first")
+    if isinstance(folders_always_first, bool):
+        config["folders_always_first"] = folders_always_first
+    elif isinstance(folders_always_first, str):
+        lowered = folders_always_first.lower()
+        if lowered in ("true", "false"):
+            config["folders_always_first"] = lowered == "true"
 
     return config
 
@@ -178,6 +136,8 @@ def order_bloggy_entries(entries, config):
     order_list = [name.strip().rstrip("/") for name in config.get("order", []) if str(name).strip()]
     if not order_list:
         sorted_entries = _sort_bloggy_entries(entries, config.get("sort"), config.get("folders_first", True))
+        if config.get("folders_always_first"):
+            sorted_entries = _group_folders_first(sorted_entries)
         logger.debug(
             "[DEBUG] .bloggy order empty; sorted entries: %s",
             [item.name for item in sorted_entries],
@@ -210,12 +170,20 @@ def order_bloggy_entries(entries, config):
         config.get("sort"),
         config.get("folders_first", True)
     )
+    combined = ordered + remaining_sorted
+    if config.get("folders_always_first"):
+        combined = _group_folders_first(combined)
     logger.debug(
         "[DEBUG] .bloggy ordered=%s remaining=%s",
         [item.name for item in ordered],
         [item.name for item in remaining_sorted],
     )
-    return ordered + remaining_sorted
+    return combined
+
+def _group_folders_first(entries):
+    folders = [item for item in entries if item.is_dir()]
+    files = [item for item in entries if not item.is_dir()]
+    return folders + files
 
 def _sort_bloggy_entries(entries, sort_method, folders_first):
     method = sort_method or "name_asc"
@@ -1446,7 +1414,7 @@ def build_post_tree(folder):
                         Span(UkIcon("folder", cls="text-blue-500 w-4 h-4"), cls="w-4 mr-2 flex items-center justify-center shrink-0"),
                         Span(folder_title, cls="truncate min-w-0", title=folder_title),
                         cls="flex items-center font-medium cursor-pointer py-1 px-2 hover:text-blue-600 select-none list-none rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-w-0"),
-                    Ul(*sub_items, cls="ml-2 pl-2 space-y-1 border-l border-slate-100 dark:border-slate-800"),
+                    Ul(*sub_items, cls="ml-4 pl-2 space-y-1 border-l border-slate-100 dark:border-slate-800"),
                     data_folder="true"), cls="my-1"))
         elif item.suffix == '.md':
             slug = str(item.relative_to(root).with_suffix(''))
