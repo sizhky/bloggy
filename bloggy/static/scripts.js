@@ -1,6 +1,7 @@
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
 
 const mermaidStates = {};
+const GANTT_WIDTH = 1200;
 
 function initMermaidInteraction() {
     document.querySelectorAll('.mermaid-wrapper').forEach(wrapper => {
@@ -68,7 +69,7 @@ function initMermaidInteraction() {
             
             const zoomIntensity = 0.01;
             const delta = e.deltaY > 0 ? 1 - zoomIntensity : 1 + zoomIntensity; // Zoom out or in speed
-            const newScale = Math.min(Math.max(0.1, state.scale * delta), 15);
+            const newScale = Math.min(Math.max(0.1, state.scale * delta), 55);
             
             // Calculate how much to adjust translation to keep point under cursor fixed
             // With center origin, we need to account for the scale change around center
@@ -226,6 +227,17 @@ function getCurrentTheme() {
     return document.documentElement.classList.contains('dark') ? 'dark' : 'default';
 }
 
+function getDynamicGanttWidth() {
+    // Check if any mermaid wrapper has custom gantt width
+    const wrappers = document.querySelectorAll('.mermaid-wrapper[data-gantt-width]');
+    if (wrappers.length > 0) {
+        // Use the first custom width found, or max width if multiple
+        const widths = Array.from(wrappers).map(w => parseInt(w.getAttribute('data-gantt-width')) || GANTT_WIDTH);
+        return Math.max(...widths);
+    }
+    return GANTT_WIDTH;
+}
+
 function reinitializeMermaid() {
     console.group('🔄 reinitializeMermaid called');
     console.log('Switching to theme:', getCurrentTheme());
@@ -238,11 +250,14 @@ function reinitializeMermaid() {
         return;
     }
     
+    const dynamicWidth = getDynamicGanttWidth();
+    console.log('Using dynamic Gantt width:', dynamicWidth);
+    
     mermaid.initialize({ 
         startOnLoad: false,
         theme: getCurrentTheme(),
         gantt: {
-            useWidth: 1200,
+            useWidth: dynamicWidth,
             useMaxWidth: false
         }
     });
@@ -292,11 +307,15 @@ function reinitializeMermaid() {
 }
 
 console.log('🚀 Initial Mermaid setup - Theme:', getCurrentTheme());
+
+const initialGanttWidth = getDynamicGanttWidth();
+console.log('Using initial Gantt width:', initialGanttWidth);
+
 mermaid.initialize({ 
     startOnLoad: true,
     theme: getCurrentTheme(),
     gantt: {
-        useWidth: 1200,
+        useWidth: initialGanttWidth,
         useMaxWidth: false
     }
 });

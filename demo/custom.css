@@ -7,3 +7,13 @@ span.highlight {
     font-family: 'Courier New', Courier, monospace;
     font-size: 2rem;
 }
+
+span.abcd {
+    background-color: #065437;
+    color: green;
+    padding: 0 4px;
+    border-radius: 3px;
+    font-weight: bold;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 2rem;
+}

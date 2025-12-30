@@ -327,6 +327,7 @@ class ContentRenderer(FrankenRenderer):
             height = 'auto'
             width = '65vw'  # Default to viewport width for better visibility
             min_height = '400px'
+            gantt_width = None  # Custom Gantt width override
             
             if frontmatter_match:
                 frontmatter_content = frontmatter_match.group(1)
@@ -346,6 +347,26 @@ class ContentRenderer(FrankenRenderer):
                         min_height = height
                     if 'width' in config:
                         width = config['width']
+                    
+                    # Handle aspect_ratio for Gantt charts
+                    if 'aspect_ratio' in config:
+                        aspect_value = config['aspect_ratio'].strip()
+                        try:
+                            # Parse ratio notation (e.g., "16:9", "21:9", "32:9")
+                            if ':' in aspect_value:
+                                w_ratio, h_ratio = map(float, aspect_value.split(':'))
+                                ratio = w_ratio / h_ratio
+                            else:
+                                # Parse decimal notation (e.g., "1.78", "2.4")
+                                ratio = float(aspect_value)
+                            
+                            # Calculate Gantt width based on aspect ratio
+                            # Base width of 1200, scaled by ratio
+                            gantt_width = int(1200 * ratio)
+                        except (ValueError, ZeroDivisionError) as e:
+                            print(f"Invalid aspect_ratio format '{aspect_value}': {e}")
+                            gantt_width = None
+                            
                 except Exception as e:
                     print(f"Error parsing mermaid frontmatter: {e}")
                 
@@ -367,6 +388,9 @@ class ContentRenderer(FrankenRenderer):
             # Escape the code for use in data attribute
             escaped_code = code.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
             
+            # Add custom Gantt width as data attribute if specified
+            gantt_data_attr = f' data-gantt-width="{gantt_width}"' if gantt_width else ''
+            
             return f'''<div class="mermaid-container relative border-4 rounded-md my-4 shadow-2xl" style="{container_style}">
                 <div class="mermaid-controls absolute top-2 right-2 z-10 flex gap-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded">
                     <button onclick="openMermaidFullscreen('{diagram_id}')" class="px-2 py-1 text-xs border rounded hover:bg-slate-100 dark:hover:bg-slate-700" title="Fullscreen">⛶</button>
@@ -374,7 +398,7 @@ class ContentRenderer(FrankenRenderer):
                     <button onclick="zoomMermaidIn('{diagram_id}')" class="px-2 py-1 text-xs border rounded hover:bg-slate-100 dark:hover:bg-slate-700" title="Zoom in">+</button>
                     <button onclick="zoomMermaidOut('{diagram_id}')" class="px-2 py-1 text-xs border rounded hover:bg-slate-100 dark:hover:bg-slate-700" title="Zoom out">−</button>
                 </div>
-                <div id="{diagram_id}" class="mermaid-wrapper p-4 overflow-hidden flex justify-center items-center" style="min-height: {min_height}; height: {height};" data-mermaid-code="{escaped_code}"><pre class="mermaid" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">{code}</pre></div>
+                <div id="{diagram_id}" class="mermaid-wrapper p-4 overflow-hidden flex justify-center items-center" style="min-height: {min_height}; height: {height};" data-mermaid-code="{escaped_code}"{gantt_data_attr}><pre class="mermaid" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">{code}</pre></div>
             </div>'''
         
         # For other languages: escape HTML/XML for display, but NOT for markdown 
