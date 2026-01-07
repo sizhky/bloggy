@@ -933,6 +933,28 @@ hdrs = (
         .dark .uk-table-striped tbody tr:hover {
             background-color: rgba(59, 130, 246, 0.15);
         }
+        .uk-table thead {
+            border-bottom: 2px solid rgba(71, 85, 105, 0.3);
+        }
+        .dark .uk-table thead {
+            border-bottom: 2px solid rgba(148, 163, 184, 0.4);
+        }
+        .uk-table thead th {
+            font-weight: 600;
+            font-size: 1.25rem;
+            color: rgb(51, 65, 85);
+        }
+        .dark .uk-table thead th {
+            color: rgb(226, 232, 240);
+        }
+        .uk-table th:not(:last-child),
+        .uk-table td:not(:last-child) {
+            border-right: 1px solid rgba(71, 85, 105, 0.15);
+        }
+        .dark .uk-table th:not(:last-child),
+        .dark .uk-table td:not(:last-child) {
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
     """),
     # Script("if(!localStorage.__FRANKEN__) localStorage.__FRANKEN__ = JSON.stringify({mode: 'light'})"))
     Script("""
