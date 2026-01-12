@@ -22,9 +22,28 @@ slug_to_title = lambda s: ' '.join(
     for word in s.replace('-', ' ').replace('_', ' ').split()
 )
 
+def _strip_inline_markdown(text):
+    cleaned = text or ""
+    cleaned = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', cleaned)
+    cleaned = re.sub(r'\[([^\]]+)\]\[[^\]]*\]', r'\1', cleaned)
+    cleaned = re.sub(r'`([^`]+)`', r'\1', cleaned)
+    cleaned = re.sub(r'\*\*([^*]+)\*\*', r'\1', cleaned)
+    cleaned = re.sub(r'__([^_]+)__', r'\1', cleaned)
+    cleaned = re.sub(r'\*([^*]+)\*', r'\1', cleaned)
+    cleaned = re.sub(r'_([^_]+)_', r'\1', cleaned)
+    cleaned = re.sub(r'~~([^~]+)~~', r'\1', cleaned)
+    return cleaned
+
+def _plain_text_from_html(text):
+    import html
+    cleaned = re.sub(r'<[^>]+>', '', text or "")
+    return html.unescape(cleaned)
+
 def text_to_anchor(text):
     """Convert text to anchor slug"""
-    return re.sub(r'[^\w\s-]', '', text.lower()).replace(' ', '-')
+    cleaned = _strip_inline_markdown(text)
+    cleaned = _plain_text_from_html(cleaned)
+    return re.sub(r'[^\w\s-]', '', cleaned.lower()).replace(' ', '-')
 
 # Cache for parsed frontmatter to avoid re-reading files
 _frontmatter_cache = {}
@@ -409,10 +428,12 @@ class ContentRenderer(FrankenRenderer):
     
     def render_heading(self, token):
         """Render headings with anchor IDs for TOC linking"""
+        import html
         level = token.level
         inner = self.render_inner(token)
-        anchor = text_to_anchor(inner)
-        return f'<h{level} id="{anchor}">{inner}</h{level}>'
+        plain = _plain_text_from_html(inner)
+        anchor = text_to_anchor(plain)
+        return f'<h{level} id="{anchor}">{html.escape(plain)}</h{level}>'
     
     def render_superscript(self, token):
         """Render superscript text"""
@@ -1275,7 +1296,8 @@ def extract_toc(content):
     headings = []
     for match in heading_pattern.finditer(content_no_code):
         level = len(match.group(1))
-        text = match.group(2).strip()
+        raw_text = match.group(2).strip()
+        text = _strip_inline_markdown(raw_text)
         # Create anchor from heading text using shared function
         anchor = text_to_anchor(text)
         headings.append((level, text, anchor))
