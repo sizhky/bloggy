@@ -9,6 +9,20 @@ function bloggyDebug(...args) {
 const mermaidStates = {};
 const GANTT_WIDTH = 1200;
 
+function isSearchResultsSwapTarget(target) {
+    if (!target || !(target instanceof Element)) {
+        return false;
+    }
+    return target.id === 'posts-search-results' || target.closest('#posts-search-results');
+}
+
+// Prevent global reinitializers (and highlight.js hooks) from firing on sidebar search swaps.
+document.body.addEventListener('htmx:afterSwap', (event) => {
+    if (isSearchResultsSwapTarget(event.target)) {
+        event.stopImmediatePropagation();
+    }
+}, true);
+
 function patchHighlightJs() {
     if (!window.hljs || window.hljs.__bloggyPatched) {
         return;
@@ -681,6 +695,9 @@ document.body.addEventListener('htmx:afterSwap', function(event) {
         targetTag: event.target?.tagName || null,
         targetClasses: event.target?.className || null
     });
+    if (isSearchResultsSwapTarget(event.target)) {
+        return;
+    }
     patchHighlightJs();
     mermaid.run().then(() => {
         setTimeout(initMermaidInteraction, 100);
