@@ -1236,10 +1236,9 @@ def _posts_search_block():
         ),
         Div(
             _render_posts_search_results(""),
-            cls="posts-search-results mt-3"
+            cls="posts-search-results mt-3 max-h-64 overflow-y-auto"
         ),
-        Div(cls="mt-4 h-px w-full bg-slate-200/80 dark:bg-slate-700/70"),
-        cls="posts-search-block"
+        cls="posts-search-block sticky top-0 z-10 bg-white/20 dark:bg-slate-950/70 backdrop-blur-lg border border-slate-900/10 dark:border-slate-700/25 ring-1 ring-white/20 dark:ring-slate-900/30 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.45)] dark:shadow-[0_28px_70px_-45px_rgba(2,6,23,0.85)] p-3"
     )
 
 @lru_cache(maxsize=1)
@@ -1252,11 +1251,15 @@ def _cached_posts_sidebar_html(fingerprint):
         is_open=sidebars_open,
         data_sidebar="posts",
         shortcut_key="Z",
-        extra_content=[_posts_search_block()]
+        extra_content=[
+            _posts_search_block(),
+            Div(cls="h-px w-full bg-slate-200/80 dark:bg-slate-700/70")
+        ],
+        scroll_target="list"
     )
     return to_xml(sidebar)
 
-def collapsible_sidebar(icon, title, items_list, is_open=False, data_sidebar=None, shortcut_key=None, extra_content=None):
+def collapsible_sidebar(icon, title, items_list, is_open=False, data_sidebar=None, shortcut_key=None, extra_content=None, scroll_target="container"):
     """Reusable collapsible sidebar component with sticky header"""
     # Build the summary content
     summary_content = [
@@ -1279,16 +1282,22 @@ def collapsible_sidebar(icon, title, items_list, is_open=False, data_sidebar=Non
     # Sidebar styling configuration
     common_frost_style = "bg-white/20 dark:bg-slate-950/70 backdrop-blur-lg border border-slate-900/10 dark:border-slate-700/25 ring-1 ring-white/20 dark:ring-slate-900/30 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.45)] dark:shadow-[0_28px_70px_-45px_rgba(2,6,23,0.85)]"
     summary_classes = f"flex items-center gap-2 font-semibold cursor-pointer py-2.5 px-3 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-lg select-none list-none {common_frost_style} min-h-[56px]"
-    content_classes = f"p-3 {common_frost_style} rounded-lg overflow-y-auto max-h-[calc(100vh-18rem)] sidebar-scroll-container"
+    if scroll_target == "list":
+        content_classes = f"p-3 {common_frost_style} rounded-lg max-h-[calc(100vh-18rem)] flex flex-col gap-4 overflow-hidden min-h-0"
+        list_classes = "list-none pt-4 flex-1 min-h-0 overflow-y-auto sidebar-scroll-container"
+    else:
+        content_classes = f"p-3 {common_frost_style} rounded-lg overflow-y-auto max-h-[calc(100vh-18rem)] sidebar-scroll-container"
+        list_classes = "list-none pt-4"
     
     extra_content = extra_content or []
+    content_id = "sidebar-scroll-container" if scroll_target != "list" else None
     return Details(
         Summary(*summary_content, cls=summary_classes, style="margin: 0 0 0.5rem 0;"),
         Div(
             *extra_content,
-            Ul(*items_list, cls="list-none pt-4"),
+            Ul(*items_list, cls=list_classes, id="sidebar-scroll-container" if scroll_target == "list" else None),
             cls=content_classes,
-            id="sidebar-scroll-container",
+            id=content_id,
             style="will-change: auto;"
         ),
         open=is_open,
