@@ -1353,20 +1353,29 @@ def _render_posts_search_results(query):
 def _posts_search_block():
     return Div(
         Div("Filter", cls="text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2"),
-        Input(
-            type="search",
-            name="q",
-            placeholder="Search file names…",
-            autocomplete="off",
-            data_placeholder_cycle="1",
-            data_placeholder_primary="Search file names…",
-            data_placeholder_alt="Search regex with /pattern/ syntax",
-            data_search_key="posts",
-            hx_get="/_sidebar/posts/search",
-            hx_trigger="input changed delay:300ms",
-            hx_target="next .posts-search-results",
-            hx_swap="innerHTML",
-            cls="w-full px-3 py-2 text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/60 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        Div(
+            Input(
+                type="search",
+                name="q",
+                placeholder="Search file names…",
+                autocomplete="off",
+                data_placeholder_cycle="1",
+                data_placeholder_primary="Search file names…",
+                data_placeholder_alt="Search regex with /pattern/ syntax",
+                data_search_key="posts",
+                hx_get="/_sidebar/posts/search",
+                hx_trigger="input changed delay:300ms",
+                hx_target="next .posts-search-results",
+                hx_swap="innerHTML",
+                cls="w-full px-3 py-2 text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/60 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            ),
+            Button(
+                "×",
+                type="button",
+                aria_label="Clear search",
+                cls="posts-search-clear-button absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 rounded text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            ),
+            cls="relative"
         ),
         Div(
             _render_posts_search_results(""),

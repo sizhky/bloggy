@@ -657,6 +657,41 @@ function initPostsSearchPersistence(rootElement = document) {
     }
 }
 
+function initSearchClearButtons(rootElement = document) {
+    const blocks = rootElement.querySelectorAll('.posts-search-block');
+    blocks.forEach((block) => {
+        const input = block.querySelector('input[type="search"][name="q"]');
+        const button = block.querySelector('.posts-search-clear-button');
+        const results = block.querySelector('.posts-search-results');
+        if (!input || !button) {
+            return;
+        }
+        if (button.dataset.clearBound === 'true') {
+            return;
+        }
+        button.dataset.clearBound = 'true';
+        const updateVisibility = () => {
+            button.style.opacity = input.value ? '1' : '0';
+            button.style.pointerEvents = input.value ? 'auto' : 'none';
+        };
+        updateVisibility();
+        input.addEventListener('input', updateVisibility);
+        button.addEventListener('click', () => {
+            input.value = '';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            if (results) {
+                results.innerHTML = '';
+            }
+            try {
+                localStorage.removeItem('bloggy:postsSearchTerm');
+                localStorage.removeItem('bloggy:postsSearchResults');
+            } catch (err) {
+                // Ignore storage failures.
+            }
+        });
+    });
+}
+
 document.addEventListener('toggle', (event) => {
     const details = event.target;
     if (!(details instanceof HTMLDetailsElement)) {
@@ -932,6 +967,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSearchPlaceholderCycle(document);
     initPostsSearchPersistence(document);
     initCodeBlockCopyButtons(document);
+    initSearchClearButtons(document);
 });
 
 document.body.addEventListener('htmx:afterSwap', (event) => {
@@ -941,4 +977,5 @@ document.body.addEventListener('htmx:afterSwap', (event) => {
     initSearchPlaceholderCycle(event.target);
     initPostsSearchPersistence(event.target);
     initCodeBlockCopyButtons(event.target);
+    initSearchClearButtons(event.target);
 });
