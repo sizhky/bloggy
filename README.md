@@ -14,6 +14,13 @@ Simple Table
 | Modern UI                   | Responsive design, dark mode, three-panel layout, HTMX navigation |
 | Interactive Diagrams       | Zoomable, pannable Mermaid diagrams with fullscreen support |
 
+```typescript
+interface CSVParserAPI {
+  // Parse uploaded CSV file and return structured data
+  parseCSVFile(file: File): Promise<ParseResult>;
+}
+```
+
 ## Architecture Overview
 
 ```mermaid

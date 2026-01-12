@@ -580,10 +580,32 @@ class ContentRenderer(FrankenRenderer):
         # For other languages: escape HTML/XML for display, but NOT for markdown 
         # (markdown code blocks should show raw source)
         import html
+        raw_code = code
+        code = html.unescape(code)
         if lang and lang.lower() != 'markdown':
             code = html.escape(code)
         lang_class = f' class="language-{lang}"' if lang else ''
-        return f'<pre><code{lang_class}>{code}</code></pre>'
+        icon_html = to_xml(UkIcon("copy", cls="w-4 h-4"))
+        code_id = f"codeblock-{abs(hash(raw_code)) & 0xFFFFFF}"
+        toast_id = f"{code_id}-toast"
+        textarea_id = f"{code_id}-clipboard"
+        escaped_raw = html.escape(raw_code)
+        return (
+            '<div class="code-block relative my-4">'
+            f'<button type="button" class="code-copy-button absolute top-2 right-2 '
+            'inline-flex items-center justify-center rounded border border-slate-200 '
+            'dark:border-slate-700 bg-white/80 dark:bg-slate-900/70 '
+            'text-slate-600 dark:text-slate-300 hover:text-slate-900 '
+            'dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-500 '
+            f'transition-colors" aria-label="Copy code" '
+            f'onclick="(function(){{const el=document.getElementById(\'{textarea_id}\');const toast=document.getElementById(\'{toast_id}\');if(!el){{return;}}el.focus();el.select();const text=el.value;const done=()=>{{if(!toast){{return;}}toast.classList.remove(\'opacity-0\');toast.classList.add(\'opacity-100\');setTimeout(()=>{{toast.classList.remove(\'opacity-100\');toast.classList.add(\'opacity-0\');}},1400);}};if(navigator.clipboard&&window.isSecureContext){{navigator.clipboard.writeText(text).then(done).catch(()=>{{document.execCommand(\'copy\');done();}});}}else{{document.execCommand(\'copy\');done();}}}})()"'
+            '>'
+            f'{icon_html}<span class="sr-only">Copy code</span></button>'
+            f'<div id="{toast_id}" class="absolute top-2 right-10 text-xs bg-slate-900 text-white px-2 py-1 rounded opacity-0 transition-opacity duration-300">Copied</div>'
+            f'<textarea id="{textarea_id}" class="absolute left-[-9999px] top-0 opacity-0 pointer-events-none">{escaped_raw}</textarea>'
+            f'<pre><code{lang_class}>{code}</code></pre>'
+            '</div>'
+        )
     
     def render_link(self, token):
         href, inner, title = token.target, self.render_inner(token), f' title="{token.title}"' if token.title else ''

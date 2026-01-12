@@ -3,6 +3,72 @@ import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.mi
 const mermaidStates = {};
 const GANTT_WIDTH = 1200;
 
+function handleCodeCopyClick(event) {
+    const button = event.target.closest('.code-copy-button, .hljs-copy-button');
+    if (!button) {
+        return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const container = button.closest('.code-block') || button.closest('pre') || button.parentElement;
+    const textarea = container ? container.querySelector('textarea[id$="-clipboard"]') : null;
+    let text = '';
+    if (textarea && textarea.value) {
+        text = textarea.value;
+    } else {
+        const codeEl = (container && container.querySelector('pre > code')) ||
+            (container && container.querySelector('code')) ||
+            button.closest('pre');
+        if (!codeEl) {
+            return;
+        }
+        text = codeEl.innerText || codeEl.textContent || '';
+    }
+    const showToast = () => {
+        let toast = document.getElementById('code-copy-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'code-copy-toast';
+            toast.className = 'fixed top-6 right-6 z-[10000] text-xs bg-slate-900 text-white px-3 py-2 rounded shadow-lg opacity-0 transition-opacity duration-300';
+            toast.textContent = 'Copied';
+            document.body.appendChild(toast);
+        }
+        toast.classList.remove('opacity-0');
+        toast.classList.add('opacity-100');
+        setTimeout(() => {
+            toast.classList.remove('opacity-100');
+            toast.classList.add('opacity-0');
+        }, 1400);
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(showToast).catch(() => {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'absolute';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast();
+        });
+    } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'absolute';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast();
+    }
+}
+
+document.addEventListener('click', handleCodeCopyClick, true);
+
 function initMermaidInteraction() {
     document.querySelectorAll('.mermaid-wrapper').forEach(wrapper => {
         const svg = wrapper.querySelector('svg');
@@ -441,6 +507,53 @@ function initSearchPlaceholderCycle(rootElement = document) {
     });
 }
 
+function initCodeBlockCopyButtons(rootElement = document) {
+    const buttons = rootElement.querySelectorAll('.code-copy-button');
+    buttons.forEach((button) => {
+        if (button.dataset.copyBound === 'true') {
+            return;
+        }
+        button.dataset.copyBound = 'true';
+        button.addEventListener('click', () => {
+            const container = button.closest('.code-block');
+            const codeEl = container ? container.querySelector('pre > code') : null;
+            if (!codeEl) {
+                return;
+            }
+            const text = codeEl.innerText || codeEl.textContent || '';
+            const done = () => {
+                button.classList.add('is-copied');
+                setTimeout(() => button.classList.remove('is-copied'), 1200);
+            };
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(done).catch(() => {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.setAttribute('readonly', '');
+                    textarea.style.position = 'absolute';
+                    textarea.style.left = '-9999px';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    done();
+                });
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.setAttribute('readonly', '');
+                textarea.style.position = 'absolute';
+                textarea.style.left = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                done();
+            }
+        });
+    });
+}
+
 function initPostsSearchPersistence(rootElement = document) {
     const input = rootElement.querySelector('.posts-search-block input[type="search"][name="q"]');
     const results = rootElement.querySelector('.posts-search-results');
@@ -453,6 +566,20 @@ function initPostsSearchPersistence(rootElement = document) {
     input.dataset.searchPersistenceBound = 'true';
     const termKey = 'bloggy:postsSearchTerm';
     const resultsKey = 'bloggy:postsSearchResults';
+    const enhanceGatherLink = () => {
+        const gatherLink = results.querySelector('a[href^="/search/gather"]');
+        if (!gatherLink) {
+            return;
+        }
+        const href = gatherLink.getAttribute('href');
+        if (!href) {
+            return;
+        }
+        gatherLink.setAttribute('hx_get', href);
+        gatherLink.setAttribute('hx_target', '#main-content');
+        gatherLink.setAttribute('hx_push_url', 'true');
+        gatherLink.setAttribute('hx_swap', 'outerHTML show:window:top settle:0.1s');
+    };
     let storedTerm = '';
     let storedResults = null;
     try {
@@ -470,6 +597,7 @@ function initPostsSearchPersistence(rootElement = document) {
             const payload = JSON.parse(storedResults);
             if (payload && payload.term === input.value && payload.html) {
                 results.innerHTML = payload.html;
+                enhanceGatherLink();
             }
         } catch (err) {
             // Ignore malformed cached payloads.
@@ -488,10 +616,28 @@ function initPostsSearchPersistence(rootElement = document) {
         }
     };
     input.addEventListener('input', persistTerm);
+    const fetchResults = (query) => {
+        return fetch(`/_sidebar/posts/search?q=${query}`)
+            .then((response) => response.text())
+            .then((html) => {
+                results.innerHTML = html;
+                enhanceGatherLink();
+                try {
+                    localStorage.setItem(resultsKey, JSON.stringify({
+                        term: input.value,
+                        html: results.innerHTML
+                    }));
+                } catch (err) {
+                    // Ignore storage failures.
+                }
+            })
+            .catch(() => {});
+    };
     document.body.addEventListener('htmx:afterSwap', (event) => {
         if (event.target !== results) {
             return;
         }
+        enhanceGatherLink();
         try {
             localStorage.setItem(resultsKey, JSON.stringify({
                 term: input.value,
@@ -506,7 +652,7 @@ function initPostsSearchPersistence(rootElement = document) {
         if (window.htmx && typeof window.htmx.ajax === 'function') {
             window.htmx.ajax('GET', `/_sidebar/posts/search?q=${query}`, { target: results, swap: 'innerHTML' });
         } else {
-            input.dispatchEvent(new Event('input', { bubbles: true }));
+            fetchResults(query);
         }
     }
 }
@@ -643,6 +789,7 @@ document.body.addEventListener('htmx:afterSwap', function(event) {
     initPostsSidebarAutoReveal();
     initFolderChevronState();
     initSearchPlaceholderCycle(event.target || document);
+    initCodeBlockCopyButtons(event.target || document);
 });
 
 // Watch for theme changes and re-render mermaid diagrams
@@ -784,6 +931,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initKeyboardShortcuts();
     initSearchPlaceholderCycle(document);
     initPostsSearchPersistence(document);
+    initCodeBlockCopyButtons(document);
 });
 
 document.body.addEventListener('htmx:afterSwap', (event) => {
@@ -792,4 +940,5 @@ document.body.addEventListener('htmx:afterSwap', (event) => {
     }
     initSearchPlaceholderCycle(event.target);
     initPostsSearchPersistence(event.target);
+    initCodeBlockCopyButtons(event.target);
 });
