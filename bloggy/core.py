@@ -1125,8 +1125,13 @@ def _posts_sidebar_fingerprint():
     except Exception:
         return 0
 
+def _normalize_search_text(text):
+    text = (text or "").lower()
+    text = text.replace("-", " ").replace("_", " ")
+    return " ".join(text.split())
+
 def _search_post_files(query, limit=40):
-    query = (query or "").strip().lower()
+    query = _normalize_search_text(query)
     if not query:
         return []
     root = get_root_folder()
@@ -1136,7 +1141,7 @@ def _search_post_files(query, limit=40):
         if index_file and item.resolve() == index_file.resolve():
             continue
         rel = item.relative_to(root).with_suffix("")
-        haystack = f"{item.name} {rel.as_posix()}".lower()
+        haystack = _normalize_search_text(f"{item.name} {rel.as_posix()}")
         if query in haystack:
             results.append(item)
             if len(results) >= limit:
