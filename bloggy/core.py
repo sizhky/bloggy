@@ -1194,15 +1194,15 @@ def _render_posts_search_results(query):
     trimmed = (query or "").strip()
     if not trimmed:
         return Ul(
-            Li("Type to search file names.", cls="text-xs text-slate-500 dark:text-slate-400"),
-            cls="posts-search-results-list space-y-1"
+            Li("Type to search file names.", cls="text-[0.7rem] text-center text-slate-500 dark:text-slate-400 bg-transparent"),
+            cls="posts-search-results-list space-y-1 bg-white/0 dark:bg-slate-950/0"
         )
 
     matches = _search_post_files(trimmed)
     if not matches:
         return Ul(
-            Li(f'No matches for "{trimmed}".', cls="text-xs text-slate-500 dark:text-slate-400"),
-            cls="posts-search-results-list space-y-1"
+            Li(f'No matches for "{trimmed}".', cls="text-xs text-slate-500 dark:text-slate-400 bg-transparent"),
+            cls="posts-search-results-list space-y-1 bg-white/0 dark:bg-slate-950/0"
         )
 
     root = get_root_folder()
@@ -1219,7 +1219,7 @@ def _render_posts_search_results(query):
                 cls="post-search-link flex items-center py-1 px-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors min-w-0"
             )
         ))
-    return Ul(*items, cls="posts-search-results-list space-y-1")
+    return Ul(*items, cls="posts-search-results-list space-y-1 bg-white/0 dark:bg-slate-950/0")
 
 def _posts_search_block():
     return Div(
@@ -1236,9 +1236,9 @@ def _posts_search_block():
         ),
         Div(
             _render_posts_search_results(""),
-            cls="posts-search-results mt-3 max-h-64 overflow-y-auto"
+            cls="posts-search-results mt-4 max-h-64 overflow-y-auto bg-white/0 dark:bg-slate-950/0"
         ),
-        cls="posts-search-block sticky top-0 z-10 bg-white/20 dark:bg-slate-950/70 backdrop-blur-lg border border-slate-900/10 dark:border-slate-700/25 ring-1 ring-white/20 dark:ring-slate-900/30 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.45)] dark:shadow-[0_28px_70px_-45px_rgba(2,6,23,0.85)] p-3"
+        cls="posts-search-block sticky top-0 z-10 bg-white/20 dark:bg-slate-950/70 backdrop-blur-lg shadow-[0_24px_60px_-40px_rgba(15,23,42,0.45)] dark:shadow-[0_28px_70px_-45px_rgba(2,6,23,0.85)]"
     )
 
 @lru_cache(maxsize=1)
