@@ -1223,6 +1223,7 @@ def _render_posts_search_results(query):
 
 def _posts_search_block():
     return Div(
+        Div("Filter", cls="text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2"),
         Input(
             type="search",
             name="q",
@@ -1238,7 +1239,7 @@ def _posts_search_block():
             _render_posts_search_results(""),
             cls="posts-search-results mt-4 max-h-64 overflow-y-auto bg-white/0 dark:bg-slate-950/0"
         ),
-        cls="posts-search-block sticky top-0 z-10 bg-white/20 dark:bg-slate-950/70 backdrop-blur-lg shadow-[0_24px_60px_-40px_rgba(15,23,42,0.45)] dark:shadow-[0_28px_70px_-45px_rgba(2,6,23,0.85)]"
+        cls="posts-search-block sticky top-0 z-10 bg-white/20 dark:bg-slate-950/70 mb-3"
     )
 
 @lru_cache(maxsize=1)
@@ -1246,14 +1247,15 @@ def _cached_posts_sidebar_html(fingerprint):
     sidebars_open = get_config().get_sidebars_open()
     sidebar = collapsible_sidebar(
         "menu",
-        "Posts",
+        "Library",
         get_posts(),
         is_open=sidebars_open,
         data_sidebar="posts",
         shortcut_key="Z",
         extra_content=[
             _posts_search_block(),
-            Div(cls="h-px w-full bg-slate-200/80 dark:bg-slate-700/70")
+            Div(cls="h-px w-full bg-slate-200/80 dark:bg-slate-700/70 my-2"),
+            Div("Posts", cls="text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-1")
         ],
         scroll_target="list"
     )
@@ -1283,8 +1285,8 @@ def collapsible_sidebar(icon, title, items_list, is_open=False, data_sidebar=Non
     common_frost_style = "bg-white/20 dark:bg-slate-950/70 backdrop-blur-lg border border-slate-900/10 dark:border-slate-700/25 ring-1 ring-white/20 dark:ring-slate-900/30 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.45)] dark:shadow-[0_28px_70px_-45px_rgba(2,6,23,0.85)]"
     summary_classes = f"flex items-center gap-2 font-semibold cursor-pointer py-2.5 px-3 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-lg select-none list-none {common_frost_style} min-h-[56px]"
     if scroll_target == "list":
-        content_classes = f"p-3 {common_frost_style} rounded-lg max-h-[calc(100vh-18rem)] flex flex-col gap-4 overflow-hidden min-h-0"
-        list_classes = "list-none pt-4 flex-1 min-h-0 overflow-y-auto sidebar-scroll-container"
+        content_classes = f"p-3 {common_frost_style} rounded-lg max-h-[calc(100vh-18rem)] flex flex-col overflow-hidden min-h-0"
+        list_classes = "list-none pt-2 flex-1 min-h-0 overflow-y-auto sidebar-scroll-container"
     else:
         content_classes = f"p-3 {common_frost_style} rounded-lg overflow-y-auto max-h-[calc(100vh-18rem)] sidebar-scroll-container"
         list_classes = "list-none pt-4"
