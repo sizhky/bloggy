@@ -1112,7 +1112,7 @@ def gather_search_results(q: str = "", htmx=None):
 
     root = get_root_folder()
     sections = []
-    copy_parts = ["# Search Results (LLM Gather)\n"]
+    copy_parts = [f"# Search Results: {q.strip() or 'All'}\n"]
     if regex_error:
         copy_parts.append(f"> {regex_error}\n")
     for idx, item in enumerate(matches):
@@ -1130,13 +1130,14 @@ def gather_search_results(q: str = "", htmx=None):
 
     copy_text = "".join(copy_parts)
     content = Div(
-        H1("Search Results (LLM Gather)", cls="text-3xl font-bold mb-6"),
+        H1(f"Search Results: {q.strip() or 'All'}", cls="text-3xl font-bold mb-6"),
         P(regex_error, cls="text-amber-600 dark:text-amber-400 text-sm mb-4") if regex_error else None,
         Button(
-            "Copy all results",
+            UkIcon("copy", cls="w-5 h-5"),
+            Span("Copy all results", cls="text-sm font-semibold"),
             type="button",
             onclick="(function(){const el=document.getElementById('gather-clipboard');const toast=document.getElementById('gather-toast');if(!el){return;}el.focus();el.select();const text=el.value;const done=()=>{if(!toast){return;}toast.classList.remove('opacity-0');toast.classList.add('opacity-100');setTimeout(()=>{toast.classList.remove('opacity-100');toast.classList.add('opacity-0');},1400);};if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(done).catch(()=>{document.execCommand('copy');done();});}else{document.execCommand('copy');done();}})()",
-            cls="w-full text-lg font-semibold py-4 mb-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+            cls="inline-flex items-center gap-2 px-3 py-2 mb-6 rounded-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
         ),
         Div(
             "Copied!",
@@ -1319,6 +1320,7 @@ def _posts_search_block():
             data_placeholder_cycle="1",
             data_placeholder_primary="Search file names…",
             data_placeholder_alt="Search regex with /pattern/ syntax",
+            data_search_key="posts",
             hx_get="/_sidebar/posts/search",
             hx_trigger="input changed delay:300ms",
             hx_target="next .posts-search-results",
@@ -1327,6 +1329,7 @@ def _posts_search_block():
         ),
         Div(
             _render_posts_search_results(""),
+            id="posts-search-results",
             cls="posts-search-results mt-4 max-h-64 overflow-y-auto bg-white/0 dark:bg-slate-950/0"
         ),
         cls="posts-search-block sticky top-0 z-10 bg-white/20 dark:bg-slate-950/70 mb-3"
@@ -1824,7 +1827,31 @@ def post_detail(path: str, htmx):
     md_time = (time.time() - md_start) * 1000
     logger.debug(f"[DEBUG] Markdown rendering took {md_time:.2f}ms")
     
-    post_content = Div(H1(post_title, cls="text-4xl font-bold mb-8"), content)
+    copy_button = Button(
+        UkIcon("copy", cls="w-4 h-4"),
+        type="button",
+        title="Copy raw markdown",
+        onclick="(function(){const el=document.getElementById('raw-md-clipboard');const toast=document.getElementById('raw-md-toast');if(!el){return;}el.focus();el.select();const text=el.value;const done=()=>{if(!toast){return;}toast.classList.remove('opacity-0');toast.classList.add('opacity-100');setTimeout(()=>{toast.classList.remove('opacity-100');toast.classList.add('opacity-0');},1400);};if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(done).catch(()=>{document.execCommand('copy');done();});}else{document.execCommand('copy');done();}})()",
+        cls="inline-flex items-center justify-center p-2 rounded-md border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
+    )
+    post_content = Div(
+        Div(
+            H1(post_title, cls="text-4xl font-bold"),
+            copy_button,
+            cls="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-8"
+        ),
+        Div(
+            "Copied Raw Markdown!",
+            id="raw-md-toast",
+            cls="fixed top-6 right-6 bg-slate-900 text-white text-sm px-4 py-2 rounded shadow-lg opacity-0 transition-opacity duration-300"
+        ),
+        Textarea(
+            raw_content,
+            id="raw-md-clipboard",
+            cls="absolute left-[-9999px] top-0 opacity-0 pointer-events-none"
+        ),
+        content
+    )
     
     # Always return complete layout with sidebar and TOC
     layout_start = time.time()

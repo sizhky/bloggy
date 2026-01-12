@@ -441,6 +441,49 @@ function initSearchPlaceholderCycle(rootElement = document) {
     });
 }
 
+function initSidebarSearchPersistence(rootElement = document) {
+    const inputs = rootElement.querySelectorAll('input[data-search-key]');
+    inputs.forEach((input) => {
+        if (input.dataset.searchPersistBound === 'true') {
+            return;
+        }
+        input.dataset.searchPersistBound = 'true';
+        const key = input.dataset.searchKey;
+        if (!key) {
+            return;
+        }
+        const params = new URLSearchParams(window.location.search);
+        const urlQuery = params.get('q');
+        const stored = localStorage.getItem(`bloggy.search.${key}`) || '';
+        const nextValue = (urlQuery || stored || '').trim();
+        if (nextValue) {
+            input.value = nextValue;
+            if (window.htmx && typeof window.htmx.trigger === 'function') {
+                window.htmx.trigger(input, 'input');
+                window.htmx.trigger(input, 'change');
+            } else {
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+        input.addEventListener('input', () => {
+            localStorage.setItem(`bloggy.search.${key}`, input.value || '');
+        });
+        const resultsContainer = input.closest('.posts-search-block')?.querySelector('#posts-search-results');
+        if (resultsContainer) {
+            const params = new URLSearchParams(window.location.search);
+            const urlQuery = params.get('q');
+            const queryValue = (urlQuery || input.value || '').trim();
+            if (queryValue) {
+                fetch(`/_sidebar/posts/search?q=${encodeURIComponent(queryValue)}`)
+                    .then(response => response.text())
+                    .then(html => { resultsContainer.innerHTML = html; })
+                    .catch(() => {});
+            }
+        }
+    });
+}
+
 document.addEventListener('toggle', (event) => {
     const details = event.target;
     if (!(details instanceof HTMLDetailsElement)) {
@@ -572,7 +615,8 @@ document.body.addEventListener('htmx:afterSwap', function(event) {
     initMobileMenus(); // Reinitialize mobile menu handlers
     initPostsSidebarAutoReveal();
     initFolderChevronState();
-    initSearchPlaceholderCycle(event.target || document);
+    initSearchPlaceholderCycle(document);
+    initSidebarSearchPersistence(document);
 });
 
 // Watch for theme changes and re-render mermaid diagrams
@@ -713,4 +757,5 @@ document.addEventListener('DOMContentLoaded', () => {
     initFolderChevronState();
     initKeyboardShortcuts();
     initSearchPlaceholderCycle(document);
+    initSidebarSearchPersistence(document);
 });
