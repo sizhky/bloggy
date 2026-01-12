@@ -1,70 +1,7 @@
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
 
-const BLOGGY_DEBUG = localStorage.getItem('bloggy.debug') === '1';
-function bloggyDebug(...args) {
-    if (!BLOGGY_DEBUG) return;
-    console.log('[bloggy]', ...args);
-}
-
 const mermaidStates = {};
 const GANTT_WIDTH = 1200;
-
-function isSearchResultsSwapTarget(target) {
-    if (!target || !(target instanceof Element)) {
-        return false;
-    }
-    return target.id === 'posts-search-results' || target.closest('#posts-search-results');
-}
-
-// Prevent global reinitializers (and highlight.js hooks) from firing on sidebar search swaps.
-document.body.addEventListener('htmx:afterSwap', (event) => {
-    if (isSearchResultsSwapTarget(event.target)) {
-        event.stopImmediatePropagation();
-    }
-}, true);
-
-function patchHighlightJs() {
-    if (!window.hljs || window.hljs.__bloggyPatched) {
-        return;
-    }
-    const original = window.hljs.highlightElement;
-    const originalAll = window.hljs.highlightAll;
-    if (typeof original !== 'function') {
-        return;
-    }
-    window.hljs.highlightElement = (element) => {
-        if (element && element.dataset && element.dataset.highlighted) {
-            delete element.dataset.highlighted;
-        }
-        return original.call(window.hljs, element);
-    };
-    if (typeof originalAll === 'function') {
-        window.hljs.highlightAll = () => {
-            document.querySelectorAll('pre code').forEach((element) => {
-                if (element.dataset && element.dataset.highlighted) {
-                    delete element.dataset.highlighted;
-                }
-            });
-            return originalAll.call(window.hljs);
-        };
-    }
-    window.hljs.__bloggyPatched = true;
-}
-
-function suppressHighlightJsWarnings() {
-    if (console.__bloggyHljsPatched) {
-        return;
-    }
-    const originalWarn = console.warn;
-    console.warn = (...args) => {
-        const first = args[0];
-        if (typeof first === 'string' && first.includes('Element previously highlighted')) {
-            return;
-        }
-        originalWarn(...args);
-    };
-    console.__bloggyHljsPatched = true;
-}
 
 function initMermaidInteraction() {
     document.querySelectorAll('.mermaid-wrapper').forEach(wrapper => {
@@ -504,66 +441,74 @@ function initSearchPlaceholderCycle(rootElement = document) {
     });
 }
 
-function initSidebarSearchPersistence(rootElement = document) {
-    bloggyDebug('initSidebarSearchPersistence', { root: rootElement });
-    const inputs = rootElement.querySelectorAll('input[data-search-key]');
-    inputs.forEach((input) => {
-        const key = input.dataset.searchKey;
-        if (!key) {
-            return;
-        }
-
-        const params = new URLSearchParams(window.location.search);
-        const urlQuery = params.get('q');
-        const stored = localStorage.getItem(`bloggy.search.${key}`) || '';
-        const nextValue = (urlQuery || stored || '').trim();
-
-        if (input.dataset.searchPersistBound === 'true') {
-            if (nextValue && input.value !== nextValue && document.activeElement !== input) {
-                input.value = nextValue;
+function initPostsSearchPersistence(rootElement = document) {
+    const input = rootElement.querySelector('.posts-search-block input[type="search"][name="q"]');
+    const results = rootElement.querySelector('.posts-search-results');
+    if (!input || !results) {
+        return;
+    }
+    if (input.dataset.searchPersistenceBound === 'true') {
+        return;
+    }
+    input.dataset.searchPersistenceBound = 'true';
+    const termKey = 'bloggy:postsSearchTerm';
+    const resultsKey = 'bloggy:postsSearchResults';
+    let storedTerm = '';
+    let storedResults = null;
+    try {
+        storedTerm = localStorage.getItem(termKey) || '';
+        storedResults = localStorage.getItem(resultsKey);
+    } catch (err) {
+        storedTerm = '';
+        storedResults = null;
+    }
+    if (storedTerm && !input.value) {
+        input.value = storedTerm;
+    }
+    if (storedResults && input.value) {
+        try {
+            const payload = JSON.parse(storedResults);
+            if (payload && payload.term === input.value && payload.html) {
+                results.innerHTML = payload.html;
             }
-        } else {
-            input.dataset.searchPersistBound = 'true';
-            if (nextValue && input.value !== nextValue) {
-                input.value = nextValue;
+        } catch (err) {
+            // Ignore malformed cached payloads.
+        }
+    }
+    const persistTerm = () => {
+        try {
+            if (input.value) {
+                localStorage.setItem(termKey, input.value);
+            } else {
+                localStorage.removeItem(termKey);
+                localStorage.removeItem(resultsKey);
             }
-            input.addEventListener('input', () => {
-                localStorage.setItem(`bloggy.search.${key}`, input.value || '');
-            });
+        } catch (err) {
+            // Ignore storage failures.
         }
-
-        const resultsContainer = input.closest('.posts-search-block')?.querySelector('#posts-search-results');
-        if (!resultsContainer) {
+    };
+    input.addEventListener('input', persistTerm);
+    document.body.addEventListener('htmx:afterSwap', (event) => {
+        if (event.target !== results) {
             return;
         }
-
-        const queryValue = (urlQuery || input.value || stored || '').trim();
-        if (queryValue) {
-            console.log('[bloggy][search] query present', { key, queryValue });
+        try {
+            localStorage.setItem(resultsKey, JSON.stringify({
+                term: input.value,
+                html: results.innerHTML
+            }));
+        } catch (err) {
+            // Ignore storage failures.
         }
-        if (!queryValue) {
-            return;
-        }
-
-        if (resultsContainer.dataset.lastQuery === queryValue) {
-            return;
-        }
-        resultsContainer.dataset.lastQuery = queryValue;
-        bloggyDebug('search results fetch', { key, queryValue });
-        console.log('[bloggy][search] fetching results', { key, queryValue });
-
-        fetch(`/_sidebar/posts/search?q=${encodeURIComponent(queryValue)}`)
-            .then(response => response.text())
-            .then(html => { resultsContainer.innerHTML = html; })
-            .then(() => {
-                if (window.htmx && typeof window.htmx.process === 'function') {
-                    window.htmx.process(resultsContainer);
-                }
-                console.log('[bloggy][search] results injected', { key, queryValue });
-                updateActivePostLink();
-            })
-            .catch(() => {});
     });
+    if (input.value) {
+        const query = encodeURIComponent(input.value);
+        if (window.htmx && typeof window.htmx.ajax === 'function') {
+            window.htmx.ajax('GET', `/_sidebar/posts/search?q=${query}`, { target: results, swap: 'innerHTML' });
+        } else {
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    }
 }
 
 document.addEventListener('toggle', (event) => {
@@ -689,16 +634,6 @@ document.addEventListener('click', (event) => {
 
 // Re-run mermaid on HTMX content swaps
 document.body.addEventListener('htmx:afterSwap', function(event) {
-    bloggyDebug('htmx:afterSwap', { target: event.target });
-    console.log('[bloggy][htmx] afterSwap', {
-        targetId: event.target?.id || null,
-        targetTag: event.target?.tagName || null,
-        targetClasses: event.target?.className || null
-    });
-    if (isSearchResultsSwapTarget(event.target)) {
-        return;
-    }
-    patchHighlightJs();
     mermaid.run().then(() => {
         setTimeout(initMermaidInteraction, 100);
     });
@@ -707,17 +642,13 @@ document.body.addEventListener('htmx:afterSwap', function(event) {
     initMobileMenus(); // Reinitialize mobile menu handlers
     initPostsSidebarAutoReveal();
     initFolderChevronState();
-    initSearchPlaceholderCycle(document);
-    initSidebarSearchPersistence(document);
+    initSearchPlaceholderCycle(event.target || document);
 });
 
 // Watch for theme changes and re-render mermaid diagrams
 const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
         if (mutation.attributeName === 'class') {
-            console.log('[bloggy][theme] html class changed', {
-                className: document.documentElement.className
-            });
             reinitializeMermaid();
         }
     });
@@ -845,9 +776,6 @@ function initKeyboardShortcuts() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    bloggyDebug('DOMContentLoaded', { dark: document.documentElement.classList.contains('dark') });
-    suppressHighlightJsWarnings();
-    patchHighlightJs();
     updateActivePostLink();
     updateActiveTocLink();
     initMobileMenus();
@@ -855,20 +783,13 @@ document.addEventListener('DOMContentLoaded', () => {
     initFolderChevronState();
     initKeyboardShortcuts();
     initSearchPlaceholderCycle(document);
-    initSidebarSearchPersistence(document);
+    initPostsSearchPersistence(document);
 });
 
-if (BLOGGY_DEBUG) {
-    document.body.addEventListener('htmx:beforeRequest', (event) => {
-        bloggyDebug('htmx:beforeRequest', { path: event.detail?.pathInfo?.requestPath });
-    });
-    document.body.addEventListener('htmx:afterRequest', (event) => {
-        bloggyDebug('htmx:afterRequest', { status: event.detail?.xhr?.status });
-    });
-    document.body.addEventListener('htmx:afterSettle', (event) => {
-        bloggyDebug('htmx:afterSettle', { target: event.target });
-    });
-    window.addEventListener('resize', () => {
-        bloggyDebug('resize', { width: window.innerWidth });
-    });
-}
+document.body.addEventListener('htmx:afterSwap', (event) => {
+    if (!event.target) {
+        return;
+    }
+    initSearchPlaceholderCycle(event.target);
+    initPostsSearchPersistence(event.target);
+});

@@ -1243,7 +1243,15 @@ def _parse_search_query(query):
             return None, "Invalid regex. Showing normal matches instead."
     return None, ""
 
+@lru_cache(maxsize=256)
+def _cached_search_matches(fingerprint, query, limit):
+    return _find_search_matches_uncached(query, limit)
+
 def _find_search_matches(query, limit=40):
+    fingerprint = _posts_sidebar_fingerprint()
+    return _cached_search_matches(fingerprint, query, limit)
+
+def _find_search_matches_uncached(query, limit=40):
     trimmed = (query or "").strip()
     if not trimmed:
         return [], ""
@@ -1270,7 +1278,7 @@ def _find_search_matches(query, limit=40):
             results.append(item)
             if len(results) >= limit:
                 break
-    return results, regex_error
+    return tuple(results), regex_error
 
 def _render_posts_search_results(query):
     trimmed = (query or "").strip()
