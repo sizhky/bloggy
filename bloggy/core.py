@@ -39,6 +39,13 @@ def _plain_text_from_html(text):
     cleaned = re.sub(r'<[^>]+>', '', text or "")
     return html.unescape(cleaned)
 
+def _unique_anchor(base, counts):
+    if not base:
+        base = "section"
+    current = counts.get(base, 0) + 1
+    counts[base] = current
+    return base if current == 1 else f"{base}-{current}"
+
 def text_to_anchor(text):
     """Convert text to anchor slug"""
     cleaned = _strip_inline_markdown(text)
@@ -361,6 +368,7 @@ class ContentRenderer(FrankenRenderer):
         super().__init__(*extras, img_dir=img_dir, **kwargs)
         self.footnotes, self.fn_counter = footnotes or {}, 0
         self.current_path = current_path  # Current post path for resolving relative links and images
+        self.heading_counts = {}
     
     def render_list_item(self, token):
         """Render list items with task list checkbox support"""
@@ -432,7 +440,7 @@ class ContentRenderer(FrankenRenderer):
         level = token.level
         inner = self.render_inner(token)
         plain = _plain_text_from_html(inner)
-        anchor = text_to_anchor(plain)
+        anchor = _unique_anchor(text_to_anchor(plain), self.heading_counts)
         return f'<h{level} id="{anchor}">{html.escape(plain)}</h{level}>'
     
     def render_superscript(self, token):
@@ -1080,6 +1088,15 @@ def posts_sidebar_lazy():
         id="posts-sidebar"
     )
 
+# Route to serve raw markdown for LLM-friendly access
+@rt("/posts/{path:path}.md")
+def serve_post_markdown(path: str):
+    from starlette.responses import FileResponse
+    file_path = get_root_folder() / f'{path}.md'
+    if file_path.exists():
+        return FileResponse(file_path, media_type="text/markdown; charset=utf-8")
+    return Response(status_code=404)
+
 # Route to serve static files (images, SVGs, etc.) from blog posts
 @rt("/posts/{path:path}.{ext:static}")
 def serve_post_static(path: str, ext: str):
@@ -1262,7 +1279,7 @@ def collapsible_sidebar(icon, title, items_list, is_open=False, data_sidebar=Non
     # Sidebar styling configuration
     common_frost_style = "bg-white/20 dark:bg-slate-950/70 backdrop-blur-lg border border-slate-900/10 dark:border-slate-700/25 ring-1 ring-white/20 dark:ring-slate-900/30 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.45)] dark:shadow-[0_28px_70px_-45px_rgba(2,6,23,0.85)]"
     summary_classes = f"flex items-center gap-2 font-semibold cursor-pointer py-2.5 px-3 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-lg select-none list-none {common_frost_style} min-h-[56px]"
-    content_classes = f"p-3 {common_frost_style} rounded-lg overflow-y-auto max-h-[calc(100vh-18rem)]"
+    content_classes = f"p-3 {common_frost_style} rounded-lg overflow-y-auto max-h-[calc(100vh-18rem)] sidebar-scroll-container"
     
     extra_content = extra_content or []
     return Details(
@@ -1298,12 +1315,13 @@ def extract_toc(content):
     # Parse headings from the cleaned content
     heading_pattern = re.compile(r'^(#{1,6})\s+(.+)$', re.MULTILINE)
     headings = []
+    counts = {}
     for match in heading_pattern.finditer(content_no_code):
         level = len(match.group(1))
         raw_text = match.group(2).strip()
         text = _strip_inline_markdown(raw_text)
         # Create anchor from heading text using shared function
-        anchor = text_to_anchor(text)
+        anchor = _unique_anchor(text_to_anchor(text), counts)
         headings.append((level, text, anchor))
     return headings
 

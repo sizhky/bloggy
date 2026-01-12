@@ -445,17 +445,27 @@ function updateActivePostLink() {
 }
 
 // Update active TOC link based on scroll position
+let lastActiveTocAnchor = null;
 function updateActiveTocLink() {
     const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]');
     const tocLinks = document.querySelectorAll('.toc-link');
     
     let activeHeading = null;
+    let nearestBelow = null;
+    let nearestBelowTop = Infinity;
+    const offset = 140;
     headings.forEach(heading => {
         const rect = heading.getBoundingClientRect();
-        if (rect.top <= 100) {
+        if (rect.top <= offset) {
             activeHeading = heading;
+        } else if (rect.top < nearestBelowTop) {
+            nearestBelowTop = rect.top;
+            nearestBelow = heading;
         }
     });
+    if (!activeHeading && nearestBelow) {
+        activeHeading = nearestBelow;
+    }
     
     tocLinks.forEach(link => {
         const anchor = link.getAttribute('data-anchor');
@@ -465,6 +475,14 @@ function updateActiveTocLink() {
             link.classList.remove('bg-blue-50', 'dark:bg-blue-900/20', 'text-blue-600', 'dark:text-blue-400', 'font-semibold');
         }
     });
+
+    const activeId = activeHeading ? activeHeading.id : null;
+    if (activeId && activeId !== lastActiveTocAnchor) {
+        document.querySelectorAll(`.toc-link[data-anchor="${activeId}"]`).forEach(link => {
+            link.scrollIntoView({ block: 'nearest' });
+        });
+        lastActiveTocAnchor = activeId;
+    }
 }
 
 // Listen for scroll events to update active TOC link
@@ -477,6 +495,48 @@ window.addEventListener('scroll', () => {
         });
         ticking = true;
     }
+});
+
+// Sync TOC highlight on hash changes and TOC clicks
+window.addEventListener('hashchange', () => {
+    requestAnimationFrame(updateActiveTocLink);
+});
+
+document.addEventListener('click', (event) => {
+    const link = event.target.closest('.toc-link');
+    if (!link) {
+        return;
+    }
+    const anchor = link.getAttribute('data-anchor');
+    if (!anchor) {
+        return;
+    }
+    requestAnimationFrame(() => {
+        document.querySelectorAll('.toc-link').forEach(item => {
+            item.classList.toggle(
+                'bg-blue-50',
+                item.getAttribute('data-anchor') === anchor
+            );
+            item.classList.toggle(
+                'dark:bg-blue-900/20',
+                item.getAttribute('data-anchor') === anchor
+            );
+            item.classList.toggle(
+                'text-blue-600',
+                item.getAttribute('data-anchor') === anchor
+            );
+            item.classList.toggle(
+                'dark:text-blue-400',
+                item.getAttribute('data-anchor') === anchor
+            );
+            item.classList.toggle(
+                'font-semibold',
+                item.getAttribute('data-anchor') === anchor
+            );
+        });
+        lastActiveTocAnchor = anchor;
+        updateActiveTocLink();
+    });
 });
 
 // Re-run mermaid on HTMX content swaps

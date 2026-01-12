@@ -265,6 +265,7 @@ stateDiagram-v2
 - **Mermaid Frontmatter**: Configure diagram size with YAML frontmatter (width, height, min-height)
 - **Tabbed Content**: Create multi-tab sections using `:::tabs` and `::tab{title="..."}` syntax with smooth transitions
 - **Relative Links**: Full support for relative markdown links (`./file.md`, `../other.md`) with automatic path resolution
+- **Plain-Text Headings**: Inline markdown in headings is stripped for clean display and consistent anchor slugs
 - **Math Notation**: KaTeX support for inline `$E=mc^2$` and block `$$` math equations, auto-renders after HTMX swaps
 - **Superscript & Subscript**: Use `^text^` for superscript and `~text~` for subscript (preprocessed before rendering)
 - **Strikethrough**: Use `~~text~~` for strikethrough formatting
@@ -277,6 +278,7 @@ stateDiagram-v2
 - **Dark Mode**: Automatic theme switching with localStorage persistence and instant visual feedback
 - **HTMX Navigation**: Fast, SPA-like navigation without full page reloads using `hx-get`, `hx-target`, and `hx-push-url`
 - **Collapsible Folders**: Organize posts in nested directories with chevron indicators and smooth expand/collapse
+- **Sidebar Search**: HTMX-powered filename search with results shown below the search bar (tree stays intact)
 - **Auto-Generated TOC**: Table of contents automatically extracted from headings with scroll-based active highlighting
 - **Mobile Menus**: Slide-in panels for posts and TOC on mobile devices with smooth transitions
 - **Sticky Navigation**: Navbar stays at top while scrolling, with mobile menu toggles
@@ -298,7 +300,12 @@ stateDiagram-v2
 - **Performance Logging**: Debug-level logging tracks render times and bottlenecks to `/tmp/bloggy_core.log`
 - **Custom 404 Page**: Elegant error page with navigation options and helpful tips
 - **Static File Serving**: Serves images and assets from blog directories via `/posts/{path}.{ext}` routes
+- **Raw Markdown Access**: Append `.md` to any post URL (e.g. `/posts/demo.md`) to fetch source content
 - **Optional Authentication**: Session-based auth with Beforeware when username/password configured
+
+### Quick Usage Examples
+- Sidebar search: type a filename fragment like `write up` or `write-up` to filter results without collapsing the tree
+- Raw markdown: fetch a post's source via `/posts/demo.md`
 
 ## Content Writing Features
 
