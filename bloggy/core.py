@@ -911,6 +911,32 @@ hdrs = (
         .sidebar-highlight.fade-out {
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0);
         }
+
+        /* PDF focus mode */
+        body.pdf-focus {
+            overflow: hidden;
+        }
+        body.pdf-focus #site-navbar,
+        body.pdf-focus #site-footer,
+        body.pdf-focus #posts-sidebar,
+        body.pdf-focus #toc-sidebar,
+        body.pdf-focus #mobile-posts-panel,
+        body.pdf-focus #mobile-toc-panel {
+            display: none !important;
+        }
+        body.pdf-focus #content-with-sidebars {
+            max-width: none !important;
+            width: 100vw !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            gap: 0 !important;
+        }
+        body.pdf-focus #main-content {
+            padding: 1rem !important;
+        }
+        body.pdf-focus .pdf-viewer {
+            height: calc(100vh - 6rem) !important;
+        }
         
         /* Tabs styles */
         .tabs-container { 
@@ -1740,6 +1766,7 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
         # Full layout with all sidebars
         content_with_sidebars = Div(
             cls=f"w-full {layout_max_class} mx-auto px-4 flex gap-6 flex-1".strip(),
+            id="content-with-sidebars",
             **_style_attr(layout_max_style)
         )(
             # Left sidebar - lazy load with HTMX, show loader placeholder
@@ -1767,6 +1794,7 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
             Div(
                 navbar(show_mobile_menus=True),
                 cls=f"w-full {layout_max_class} mx-auto px-4 sticky top-0 z-50 mt-4".strip(),
+                id="site-navbar",
                 **_style_attr(layout_max_style)
             ),
             mobile_posts_panel,
@@ -1774,6 +1802,7 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
             content_with_sidebars,
             Footer(Div(f"Powered by Bloggy", cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), # right justified footer
                    cls=f"w-full {layout_max_class} mx-auto px-6 mt-auto mb-6".strip(),
+                   id="site-footer",
                    **_style_attr(layout_max_style))
         )
     else:
@@ -1783,6 +1812,7 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
             Div(
                 navbar(),
                 cls=f"w-full {layout_max_class} mx-auto px-4 sticky top-0 z-50 mt-4".strip(),
+                id="site-navbar",
                 **_style_attr(layout_max_style)
             ),
             Main(
@@ -1793,6 +1823,7 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
             ),
             Footer(Div("Powered by Bloggy", cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), 
                    cls=f"w-full {layout_max_class} mx-auto px-6 mt-auto mb-6".strip(),
+                   id="site-footer",
                    **_style_attr(layout_max_style))
         )
         t_body = time.time()
@@ -1982,11 +2013,21 @@ def post_detail(path: str, htmx):
             pdf_src = f"/posts/{path}.pdf"
             pdf_content = Div(
                 Div(
-                    H1(post_title, cls="text-4xl font-bold mb-6")
+                    H1(post_title, cls="text-4xl font-bold"),
+                    Button(
+                        "Focus PDF",
+                        cls="pdf-focus-toggle inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
+                        type="button",
+                        data_pdf_focus_toggle="true",
+                        data_pdf_focus_label="Focus PDF",
+                        data_pdf_exit_label="Exit focus",
+                        aria_pressed="false"
+                    ),
+                    cls="flex items-center justify-between gap-4 flex-wrap mb-6"
                 ),
                 NotStr(
                     f'<object data="{pdf_src}" type="application/pdf" '
-                    'class="w-full h-[calc(100vh-14rem)] rounded-lg border border-slate-200 '
+                    'class="pdf-viewer w-full h-[calc(100vh-14rem)] rounded-lg border border-slate-200 '
                     'dark:border-slate-700 bg-white dark:bg-slate-900">'
                     '<p class="p-4 text-sm text-slate-600 dark:text-slate-300">'
                     'PDF preview not available. '

@@ -956,6 +956,47 @@ function initKeyboardShortcuts() {
     });
 }
 
+function syncPdfFocusButtons(root = document) {
+    const isFocused = document.body.classList.contains('pdf-focus');
+    root.querySelectorAll('[data-pdf-focus-toggle]').forEach((button) => {
+        const focusLabel = button.getAttribute('data-pdf-focus-label') || 'Focus PDF';
+        const exitLabel = button.getAttribute('data-pdf-exit-label') || 'Exit focus';
+        button.textContent = isFocused ? exitLabel : focusLabel;
+        button.setAttribute('aria-pressed', isFocused ? 'true' : 'false');
+    });
+}
+
+function ensurePdfFocusState() {
+    const hasPdfViewer = document.querySelector('.pdf-viewer') || document.querySelector('[data-pdf-focus-toggle]');
+    if (!hasPdfViewer) {
+        document.body.classList.remove('pdf-focus');
+    }
+    syncPdfFocusButtons(document);
+}
+
+function initPdfFocusToggle() {
+    document.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-pdf-focus-toggle]');
+        if (!button) {
+            return;
+        }
+        event.preventDefault();
+        document.body.classList.toggle('pdf-focus');
+        syncPdfFocusButtons(document);
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') {
+            return;
+        }
+        if (!document.body.classList.contains('pdf-focus')) {
+            return;
+        }
+        document.body.classList.remove('pdf-focus');
+        syncPdfFocusButtons(document);
+    });
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     updateActivePostLink();
@@ -964,10 +1005,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initPostsSidebarAutoReveal();
     initFolderChevronState();
     initKeyboardShortcuts();
+    initPdfFocusToggle();
     initSearchPlaceholderCycle(document);
     initPostsSearchPersistence(document);
     initCodeBlockCopyButtons(document);
     initSearchClearButtons(document);
+    ensurePdfFocusState();
 });
 
 document.body.addEventListener('htmx:afterSwap', (event) => {
@@ -978,4 +1021,5 @@ document.body.addEventListener('htmx:afterSwap', (event) => {
     initPostsSearchPersistence(event.target);
     initCodeBlockCopyButtons(event.target);
     initSearchClearButtons(event.target);
+    ensurePdfFocusState();
 });
