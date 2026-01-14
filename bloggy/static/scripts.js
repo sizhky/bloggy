@@ -503,7 +503,7 @@ function initSearchPlaceholderCycle(rootElement = document) {
             }
             showAlt = !showAlt;
             input.setAttribute('placeholder', showAlt ? alt : primary);
-        }, 2500);
+        }, 10000);
     });
 }
 

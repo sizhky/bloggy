@@ -1,5 +1,8 @@
 # Sidebar/post ordering for this folder
 # Items listed in order are shown first; remaining items follow sort/folders_first.
-order = ["todo.md", "static-build.md", "PUBLISHING.md"]
+order = ["todo.md", "PUBLISHING.md", "demo", "static-build.md", "Tao Te Ching.pdf"]
 sort = "name_asc"
 folders_first = false
+
+# Layout width configuration (optional)
+layout_max_width = "75vw"

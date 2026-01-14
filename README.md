@@ -595,6 +595,18 @@ password = "hunter2"
 
 All settings in the `.bloggy` file are optional. The configuration is managed by the `Config` class in `bloggy/config.py`.
 
+### Layout Width Configuration
+
+Set a single `layout_max_width` to control overall width (applies to both sidebar and non-sidebar pages). Values accept Tailwind max-width classes (e.g. `max-w-7xl`) or raw CSS sizes (e.g. `90vw`, `1200px`).
+
+```toml
+layout_max_width = "90vw"
+```
+
+Environment variable equivalent:
+
+- `BLOGGY_LAYOUT_MAX_WIDTH`
+
 ### Custom Sidebar Ordering
 
 Place a `.bloggy` file in any folder to control the sidebar order for that folder. `.bloggy` uses TOML format. Use `order` to pin items first, then `sort` and `folders_first` for the remainder.

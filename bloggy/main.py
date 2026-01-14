@@ -97,7 +97,7 @@ def cli():
         reload_kwargs = {
             "reload": True,
             "reload_dirs": [str(blog_root)],
-            "reload_includes": ["*.md", "*.pdf"]
+            "reload_includes": ["*.md", "*.pdf", "*.bloggy"]
         }
     else:
         reload_kwargs = {"reload": False}

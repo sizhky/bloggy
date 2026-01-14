@@ -105,6 +105,7 @@ def _normalize_bloggy_config(parsed):
         "sort": "name_asc",
         "folders_first": True,
         "folders_always_first": False,
+        "layout_max_width": None,
     }
     if not isinstance(parsed, dict):
         return config
@@ -136,6 +137,14 @@ def _normalize_bloggy_config(parsed):
         if lowered in ("true", "false"):
             config["folders_always_first"] = lowered == "true"
 
+    for key in ("layout_max_width",):
+        value = parsed.get(key)
+        if isinstance(value, (int, float)):
+            value = str(value)
+        if isinstance(value, str):
+            value = value.strip()
+            config[key] = value if value else None
+
     return config
 
 def get_bloggy_config(folder):
@@ -156,6 +165,42 @@ def get_bloggy_config(folder):
         config.get("folders_first"),
     )
     return config
+
+def _coerce_config_str(value):
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        cleaned = value.strip()
+        return cleaned if cleaned else None
+    return str(value)
+
+def _width_class_and_style(value, kind):
+    if not value:
+        return "", ""
+    val = value.strip()
+    lowered = val.lower()
+    if lowered in ("default", "auto", "none"):
+        return "", ""
+    if kind == "max":
+        if val.startswith("max-w-"):
+            return val, ""
+        if re.match(r'^\d+(\.\d+)?$', val):
+            val = f"{val}px"
+        return "", f"max-width: {val};"
+    return "", ""
+
+def _style_attr(style_value):
+    if not style_value:
+        return {}
+    return {"style": style_value}
+
+def _resolve_layout_config(current_path):
+    config = get_config()
+    return {
+        "layout_max_width": _coerce_config_str(config.get("layout_max_width", "BLOGGY_LAYOUT_MAX_WIDTH", "max-w-7xl")),
+    }
 
 def order_bloggy_entries(entries, config):
     if not entries:
@@ -1561,6 +1606,8 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
     section_class = f"section-{current_path.replace('/', '-')}" if current_path else ""
     t_section = time.time()
     logger.debug(f"[LAYOUT] section_class computed in {(t_section - layout_start_time)*1000:.2f}ms")
+    layout_config = _resolve_layout_config(current_path)
+    layout_max_class, layout_max_style = _width_class_and_style(layout_config.get("layout_max_width"), "max")
 
     # HTMX short-circuit: build only swappable fragments, never build full page chrome/sidebars tree
     if htmx and getattr(htmx, "request", None):
@@ -1691,7 +1738,10 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
                 cls="fixed inset-0 bg-white dark:bg-slate-950 z-[9999] md:hidden transform translate-x-full transition-transform duration-300"
             )
         # Full layout with all sidebars
-        content_with_sidebars = Div(cls="w-full max-w-7xl mx-auto px-4 flex gap-6 flex-1")(
+        content_with_sidebars = Div(
+            cls=f"w-full {layout_max_class} mx-auto px-4 flex gap-6 flex-1".strip(),
+            **_style_attr(layout_max_style)
+        )(
             # Left sidebar - lazy load with HTMX, show loader placeholder
             Aside(
                 Div(
@@ -1714,21 +1764,36 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
         logger.debug(f"[LAYOUT] Sidebars container built in {(t_sidebars - t_main)*1000:.2f}ms")
         # Layout with sidebar for blog posts
         body_content = Div(id="page-container", cls="flex flex-col min-h-screen")(
-            Div(navbar(show_mobile_menus=True), cls="w-full max-w-7xl mx-auto px-4 sticky top-0 z-50 mt-4"),
+            Div(
+                navbar(show_mobile_menus=True),
+                cls=f"w-full {layout_max_class} mx-auto px-4 sticky top-0 z-50 mt-4".strip(),
+                **_style_attr(layout_max_style)
+            ),
             mobile_posts_panel,
             mobile_toc_panel if mobile_toc_panel else None,
             content_with_sidebars,
             Footer(Div(f"Powered by Bloggy", cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), # right justified footer
-                   cls="w-full max-w-7xl mx-auto px-6 mt-auto mb-6")
+                   cls=f"w-full {layout_max_class} mx-auto px-6 mt-auto mb-6".strip(),
+                   **_style_attr(layout_max_style))
         )
     else:
         # Default layout without sidebar
         custom_css_links = get_custom_css_links(current_path, section_class) if current_path else []
         body_content = Div(id="page-container", cls="flex flex-col min-h-screen")(
-            Div(navbar(), cls="w-full max-w-2xl mx-auto px-4 sticky top-0 z-50 mt-4"),
-            Main(*content, cls="w-full max-w-2xl mx-auto px-6 py-8 space-y-8", id="main-content"),
+            Div(
+                navbar(),
+                cls=f"w-full {layout_max_class} mx-auto px-4 sticky top-0 z-50 mt-4".strip(),
+                **_style_attr(layout_max_style)
+            ),
+            Main(
+                *content,
+                cls=f"w-full {layout_max_class} mx-auto px-6 py-8 space-y-8".strip(),
+                id="main-content",
+                **_style_attr(layout_max_style)
+            ),
             Footer(Div("Powered by Bloggy", cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), 
-                   cls="w-full max-w-2xl mx-auto px-6 mt-auto mb-6")
+                   cls=f"w-full {layout_max_class} mx-auto px-6 mt-auto mb-6".strip(),
+                   **_style_attr(layout_max_style))
         )
         t_body = time.time()
         logger.debug(f"[LAYOUT] Body content (no sidebar) built in {(t_body - layout_start_time)*1000:.2f}ms")
