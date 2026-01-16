@@ -31,17 +31,6 @@ bump-patch:
 	@echo "Bumping patch version..."
 	@python bump_version.py patch
 
-publish: bump-patch build
-	python -m twine upload --repository sizhky dist/*
-
-publish-test: build
-	python -m twine upload --repository testpypi dist/*
-
-publish-and-checkpoint: publish
-	zsh -i -c "checkpoint"
-
-pc: publish-and-checkpoint
-
 # Explicit publish + checkpoint shortcuts
 publish-patch: bump-patch build
 	python -m twine upload --repository sizhky dist/*
@@ -55,6 +44,7 @@ publish-major: bump-major build
 	python -m twine upload --repository sizhky dist/*
 	zsh -i -c "checkpoint"
 
+pc: publish-patch
 ppat: publish-patch
 
 pmin: publish-minor
