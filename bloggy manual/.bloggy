@@ -1,0 +1,11 @@
+order = [
+  "README",
+  "configuration",
+  "markdown-features",
+  "mermaid-diagrams",
+  "theming",
+  "advanced",
+  "architecture",
+  "security",
+  "test-mermaid",
+]

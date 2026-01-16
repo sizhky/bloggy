@@ -1,81 +1,769 @@
-# Markdown Writing Features
+---
+title: A Small Demonstration of All The Markdown Features That Are Under The Sun, Without Worrying About If They Are Supported Or Not
+---
 
-Bloggy extends Markdown with a few quality-of-life features for long-form writing.
+## Headings
 
-## Sidenotes (footnotes)
-
-Standard `[^ref]` footnotes render as sidenotes on desktop and expandable notes on smaller screens.
-
-## Task lists
-
-Use `- [ ]` and `- [x]` for task items. Bloggy styles them with custom checkboxes and aligns the label text.
-
-## YouTube embeds
-
-```markdown
-[yt:VIDEO_ID]
-[yt:VIDEO_ID|Caption]
-```
-
-## Tabbed content
-
-```markdown
 :::tabs
-::tab{title="One"}
-Content for tab one.
-::
-::tab{title="Two"}
-Content for tab two.
-::
+::tab{title="Rendered"}
+## Headings
+::tab{title="Markdown Source"}
+```markdown
+## Headings
+```
 :::
+
+:::tabs
+::tab{title="Rendered"}
+### Setext Style
+Heading Level 1
+===============
+Heading Level 2
+---------------
+::tab{title="Markdown Source"}
+```
+### Setext Style
+Heading Level 1
+===============
+Heading Level 2
+---------------
+```
+:::
+
+:::tabs
+::tab{title="Rendered"}
+### ATX Style
+# Heading Level 1
+## Heading Level 2
+### Heading Level 3
+#### Heading Level 4
+##### Heading Level 5
+::tab{title="Markdown Source"}
+```
+### ATX Style
+# Heading Level 1
+## Heading Level 2
+### Heading Level 3
+#### Heading Level 4
+##### Heading Level 5
+```
+:::
+
+## Paragraphs
+
+:::tabs
+::tab{title="Rendered"}
+This is a paragraph. It contains multiple sentences to demonstrate how paragraphs work in Markdown.
+::tab{title="Markdown Source"}
+```markdown
+This is a paragraph. It contains multiple sentences to demonstrate how paragraphs work in Markdown.
+```
+:::
+
+## Line Breaks
+
+:::tabs
+::tab{title="Rendered"}
+Soft line break (just press Enter):
+This is the next line.
+
+Hard line break (use two spaces at the end of the line):  
+This is the next line.
+::tab{title="Markdown Source"}
+```markdown
+Soft line break (just press Enter):
+This is the next line.
+
+Hard line break (use two spaces at the end of the line):  
+This is the next line.
+```
+:::
+
+## Emphasis
+
+:::tabs
+::tab{title="Rendered"}
+*Italics* using single asterisks.  
+_Italics_ using single underscores.
+
+**Bold** using double asterisks.  
+__Bold__ using double underscores.
+
+***Bold and Italics*** using triple asterisks.  
+___Bold and Italics___ using triple underscores.
+::tab{title="Markdown Source"}
+```markdown
+*Italics* using single asterisks.  
+_Italics_ using single underscores.
+
+**Bold** using double asterisks.  
+__Bold__ using double underscores.
+
+***Bold and Italics*** using triple asterisks.  
+___Bold and Italics___ using triple underscores.
+```
+:::
+
+## Blockquotes
+
+:::tabs
+::tab{title="Rendered"}
+> This is a blockquote.
+> > Nested blockquote.
+::tab{title="Markdown Source"}
+```markdown
+> This is a blockquote.
+> > Nested blockquote.
+```
+:::
+
+## Lists
+
+:::tabs
+::tab{title="Rendered"}
+### Ordered List
+
+1. First item
+2. Second item
+3. Third item
+
+### Unordered List
+
+- First item
+- Second item
+- Third item
+
+### Nested List
+
+- Parent item
+  - Child item
+    - Grandchild item
+
+### Task List
+
+- [x] Completed task
+- [ ] Incomplete task
+::tab{title="Markdown Source"}
+```markdown
+### Ordered List
+
+1. First item
+2. Second item
+3. Third item
+
+### Unordered List
+
+- First item
+- Second item
+- Third item
+
+### Nested List
+
+- Parent item
+  - Child item
+    - Grandchild item
+
+### Task List
+
+- [x] Completed task
+- [ ] Incomplete task
+```
+:::
+
+## Code
+
+:::tabs
+::tab{title="Rendered"}
+### Inline Code
+
+Use `inline code` for short snippets.
+
+### Indented Code Block
+
+    def hello_world():
+        print("Hello, world!")
+
+### Fenced Code Block
+
+```python
+def hello_world():
+    print("Hello, world!")
+```
+::tab{title="Markdown Source"}
+````markdown
+### Inline Code
+
+Use `inline code` for short snippets.
+
+### Indented Code Block
+
+    def hello_world():
+        print("Hello, world!")
+
+### Fenced Code Block
+
+```python
+def hello_world():
+    print("Hello, world!")
+```
+````
+:::
+
+## Horizontal Rules
+
+:::tabs
+::tab{title="Rendered"}
+---
+::tab{title="Markdown Source"}
+```markdown
+---
+```
+:::
+
+## Links
+
+:::tabs
+::tab{title="Rendered"}
+### Inline Links
+
+[Visit Google](https://www.google.com)
+
+### Reference-Style Links
+
+[Visit Google][google]
+
+[google]: https://www.google.com
+
+### Autolinks
+
+<https://www.example.com>
+
+### Relative Links
+[Flat Land](../books/flat-land/chapter-01.md)
+
+[Home](/)
+
+[Static Build (Outer Link)](../static-build)
+::tab{title="Markdown Source"}
+```markdown
+### Inline Links
+
+[Visit Google](https://www.google.com)
+
+### Reference-Style Links
+
+[Visit Google][google]
+
+[google]: https://www.google.com
+
+### Autolinks
+
+<https://www.example.com>
+
+### Relative Links
+[Flat Land](../books/flat-land/chapter-01.md)
+
+[Home](/)
+
+[Static Build (Outer Link)](../static-build)
+```
+:::
+
+## Images
+
+:::tabs
+::tab{title="Rendered"}
+### Inline Image
+
+![A cute cat](https://cataas.com/cat?width=300&height=300)
+
+### Reference-Style Image
+
+![Another cute cat][image]
+
+[image]: https://cataas.com/cat/cute?width=300&height=300
+::tab{title="Markdown Source"}
+```markdown
+### Inline Image
+
+![A cute cat](https://cataas.com/cat?width=300&height=300)
+
+### Reference-Style Image
+
+![Another cute cat][image]
+
+[image]: https://cataas.com/cat/cute?width=300&height=300
+```
+:::
+
+## HTML
+
+:::tabs
+::tab{title="Rendered"}
+This is <b>bold</b> and this is <i>italic</i>.
+::tab{title="Markdown Source"}
+```markdown
+This is <b>bold</b> and this is <i>italic</i>.
+```
+:::
+
+## Strikethrough
+
+:::tabs
+::tab{title="Rendered"}
+~~This text is strikethrough.~~
+::tab{title="Markdown Source"}
+```markdown
+~~This text is strikethrough.~~
+```
+:::
+
+## Tables
+
+:::tabs
+::tab{title="Rendered"}
+| Column 1 | Column 2 | Column 3 |
+|----------|----------|----------|
+| Row 1    | Data     | Data     |
+| Row 2    | Data     | Data     |
+::tab{title="Markdown Source"}
+```markdown
+| Column 1 | Column 2 | Column 3 |
+|----------|----------|----------|
+| Row 1    | Data     | Data     |
+| Row 2    | Data     | Data     |
+```
+:::
+
+## Footnotes
+
+This is a footnote reference[^1].
+
+[^1]: This is the footnote text.
+
+**Markdown Source:**
+```markdown
+This is a footnote reference[^1].
+
+[ ^1]: This is the footnote text. (Do not put a space after the opening bracketh)
 ```
 
-## Inline formatting
+## Definition Lists
 
-- Superscript: `^sup^`
-- Subscript: `~sub~`
-- Strikethrough: `~~strike~~`
-- Pandoc-style inline attributes: `` `code`{.class #id key=value} ``
+:::tabs
+::tab{title="Rendered"}
+Term  
+: Definition
+::tab{title="Markdown Source"}
+```markdown
+Term  
+: Definition
+```
+:::
 
-## Relative links and assets
+## Abbreviations
 
-Relative links like `[Next](../chapter.md)` resolve to `/posts/...` and keep HTMX navigation. Images and other assets can live alongside markdown files and will be served from `/posts/{path}.{ext}`.
+:::tabs
+::tab{title="Rendered"}
+The HTML abbreviation is HTML. It stands for *HyperText Markup Language*.
 
-## Mermaid diagrams
+*[HTML]: HyperText Markup Language
+::tab{title="Markdown Source"}
+```markdown
+The HTML abbreviation is HTML. It stands for *HyperText Markup Language*.
 
-See [Mermaid Diagrams](mermaid.md) for diagram syntax, sizing frontmatter, and interactive controls.
+*[HTML]: HyperText Markup Language
+```
+:::
 
-## Content Writing Features
+## Superscript and Subscript
 
-### Footnotes as Sidenotes
-`[^1]` references compile into margin sidenotes on desktop (xl breakpoint: 1280px+) and touch-friendly expandables on smaller screens, powered by the `sidenote.css` stylesheet. On desktop, clicking a footnote reference highlights the corresponding sidenote with a temporary border animation. On mobile, clicking toggles the visibility with smooth fade-in/out. Continue to define footnotes with the standard `[^label]: ...` syntax—the renderer keeps the footnote text close to the reference and gracefully handles missing definitions with helpful placeholders. Sidenotes have amber/blue borders (light/dark) and appear in the right margin with proper spacing.
+:::tabs
+::tab{title="Rendered"}
+E = mc^2^  
+H~2~O
+::tab{title="Markdown Source"}
+```markdown
+E = mc^2^  
+H~2~O
+```
+:::
 
-### Task Lists & YouTube Embeds
-Checklists begin with `- [ ]` (open) or `- [x]` (done) and render as custom styled items with inline flex layout. Checked items display a green background with SVG checkmark, while unchecked items show a gray background. No bullet points are shown (`list-style: none`), and the checkbox is aligned to the start of the text. Embeds are just as easy: `[yt:VIDEO_ID]` or `[yt:VIDEO_ID|Caption]` drops in a responsive YouTube iframe with aspect-video ratio (16:9), rounded corners, and border. Optional captions appear below in smaller gray text. No extra HTML wrappers required—just use the simple bracket syntax.
+## Highlight Text
 
-### Tabbed Content
-Group related snippets with the `:::tabs` container and `::tab{title="Label"}` blocks. Each tab is rendered into a fully interactive panel using `switchTab()` JavaScript function. Tabs feature:
-- Clean header with active state (bold border-bottom, darker text)
-- Smooth fade-in animation when switching tabs (0.2s ease-in)
-- Height stabilization: all panels measured, container set to max height to prevent layout shifts
-- Absolute positioning for inactive panels (hidden but measured for height calculation)
-- Full markdown rendering support within each tab panel
-- Frosted glass aesthetic matching the sidebar design
+:::tabs
+::tab{title="Rendered"}
+==Highlighted text==
+::tab{title="Markdown Source"}
+```markdown
+==Highlighted text==
+```
+:::
 
-The client script stabilizes the height on DOMContentLoaded and after HTMX swaps, ensuring smooth transitions without content jumps.
+## Insertion and Deletion
 
+:::tabs
+::tab{title="Rendered"}
+{++Inserted text++}  
+{--Deleted text--}
+::tab{title="Markdown Source"}
+```markdown
+{++Inserted text++}  
+{--Deleted text--}
+```
+:::
 
-### Relative Links & Asset Helpers
-Relative references like `[Next chapter](../chapter-02.md)` automatically resolve to `/posts/...`, strip the `.md` extension, and gain `hx-get`, `hx-target="#main-content"`, `hx-push-url="true"`, and `hx-swap="innerHTML show:window:top"` attributes for seamless HTMX navigation. The renderer uses the current post's path to resolve relative links correctly, handling both `./` and `../` navigation. External links (starting with `http://`, `https://`, `mailto:`, etc.) automatically get `target="_blank"` and `rel="noopener noreferrer"` for security.
+## Comments
 
-Images and other assets can live under the blog tree and are served through `/posts/{path}.{ext}` via the `serve_post_static` route. The `FrankenRenderer.render_image()` method rewrites relative image URLs based on the current post path (using `img_dir` calculated from `current_path`), so folder-specific assets stay tidy and work correctly. Images are styled with `max-w-full h-auto rounded-lg mb-6` classes for responsive display.
+:::tabs
+::tab{title="Rendered"}
+<!-- This is a comment -->
+::tab{title="Markdown Source"}
+```markdown
+<!-- This is a comment -->
+```
+:::
 
-### Inline Formatting & Math
-Use `^sup^`, `~sub~`, `~~strike~~`, and Pandoc-style `` `code`{.class #id lang=python} `` tokens for fine-grained styling. The preprocessing stage converts `^text^` to `<sup>text</sup>` and `~text~` to `<sub>text</sub>` before markdown parsing (but preserves `~~strikethrough~~`). The `InlineCodeAttr` token (precedence 8) parses backtick code with curly-brace attributes, supporting:
-- Classes: `.variable`, `.emphasis`, `.keyword` 
-- IDs: `#unique-id`
-- Key-value pairs: `lang=python`
+## Emoji
 
-These render as `<span>` tags (not `<code>`) when attributes are present, making them perfect for semantic styling without monospace fonts.
+:::tabs
+::tab{title="Rendered"}
+:smile: :+1: :heart:
+::tab{title="Markdown Source"}
+```markdown
+:smile: :+1: :heart:
+```
+:::
 
-KaTeX handles `$inline$` or `$$block$$` math with `renderMathInElement()` configured for both display styles. The bundled script at `bloggy/static/scripts.js` runs the auto-renderer on both `DOMContentLoaded` and `htmx:afterSwap` events, so math keeps rendering correctly even when HTMX swaps fragments or the theme flips. The configuration uses `throwOnError: false` for graceful degradation.
+## Table of Contents
+
+:::tabs
+::tab{title="Rendered"}
+[TOC]
+::tab{title="Markdown Source"}
+```markdown
+[TOC]
+```
+:::
+
+## Heading IDs
+
+:::tabs
+::tab{title="Rendered"}
+### Custom Heading {#custom-id}
+::tab{title="Markdown Source"}
+```markdown
+### Custom Heading {#custom-id}
+```
+:::
+
+## Raw HTML Blocks
+
+:::tabs
+::tab{title="Rendered"}
+<div style="color: red;">This is red text.</div>
+::tab{title="Markdown Source"}
+```markdown
+<div style="color: red;">This is red text.</div>
+```
+:::
+
+## Embedded Media
+
+:::tabs
+::tab{title="Rendered"}
+### Video
+
+<video controls>
+  <source src="movie.mp4" type="video/mp4">
+</video>
+
+### Audio
+
+<audio controls>
+  <source src="audio.mp3" type="audio/mpeg">
+</audio>
+
+### PDF (iframe)
+
+<iframe
+  src="https://www.holybooks.com/wp-content/uploads/Dante-Alighieri-The-Divine-Comedy.pdf"
+  width="100%"
+  height="600"
+  style="border: 1px solid #e2e8f0; border-radius: 8px;"
+></iframe>
+::tab{title="Markdown Source"}
+```markdown
+### Video
+
+<video controls>
+  <source src="movie.mp4" type="video/mp4">
+</video>
+
+### Audio
+
+<audio controls>
+  <source src="audio.mp3" type="audio/mpeg">
+</audio>
+
+### PDF (iframe)
+
+<iframe
+  src="https://www.holybooks.com/wp-content/uploads/Dante-Alighieri-The-Divine-Comedy.pdf"
+  width="100%"
+  height="600"
+  style="border: 1px solid #e2e8f0; border-radius: 8px;"
+></iframe>
+```
+:::
+
+## Mathematical Notation
+
+:::tabs
+::tab{title="Rendered"}
+### Inline Math
+
+$E = mc^2$
+
+### Block Math
+
+$$
+\int_a^b f(x) dx = F(b) - F(a)
+$$
+::tab{title="Markdown Source"}
+```markdown
+### Inline Math
+
+$E = mc^2$
+
+### Block Math
+
+$$
+\int_a^b f(x) dx = F(b) - F(a)
+$$
+```
+:::
+
+## Diagrams
+````
+```mermaid
+---
+width: 65vw
+---
+gantt
+    title A Gantt Diagram
+    dateFormat  YYYY-MM-DD
+    section Section
+    A task           :a1, 2014-01-01, 30d
+    Another task     :after a1  , 20d
+    section Another
+    Task in sec      :2014-01-12  , 12d
+    another task      : 24d
+```
+````
+will render to
+```mermaid
+---
+width: 65vw
+---
+gantt
+    title A Gantt Diagram
+    dateFormat  YYYY-MM-DD
+    section Section
+    A task           :a1, 2014-01-01, 30d
+    Another task     :after a1  , 20d
+    section Another
+    Task in sec      :2014-01-12  , 12d
+    another task      : 24d
+```
+
+## Smart Typography
+
+:::tabs
+::tab{title="Rendered"}
+"Curly quotes"  
+-- En-dash  
+--- Em-dash
+::tab{title="Markdown Source"}
+```markdown
+"Curly quotes"  
+-- En-dash  
+--- Em-dash
+```
+:::
+
+## Custom Containers
+
+:::tabs
+::tab{title="Rendered"}
+> [!NOTE]
+> This is a note.
+
+> [!WARNING]
+> This is a warning.
+::tab{title="Markdown Source"}
+```markdown
+> [!NOTE]
+> This is a note.
+
+> [!WARNING]
+> This is a warning.
+```
+:::
+
+## Collapsible Sections
+
+:::tabs
+::tab{title="Rendered"}
+<details>
+<summary>Click to expand</summary>
+
+Hidden content here.
+
+</details>
+::tab{title="Markdown Source"}
+```markdown
+<details>
+<summary>Click to expand</summary>
+
+Hidden content here.
+
+</details>
+```
+:::
+
+## Keyboard Input
+
+:::tabs
+::tab{title="Rendered"}
+Press <kbd>Ctrl</kbd> + <kbd>C</kbd> to copy.
+::tab{title="Markdown Source"}
+```markdown
+Press <kbd>Ctrl</kbd> + <kbd>C</kbd> to copy.
+```
+:::
+
+## Line Block
+
+:::tabs
+::tab{title="Rendered"}
+| Roses are red  
+| Violets are blue
+::tab{title="Markdown Source"}
+```markdown
+| Roses are red  
+| Violets are blue
+```
+:::
+
+## Citation
+
+:::tabs
+::tab{title="Rendered"}
+This is a citation [@doe2025].
+::tab{title="Markdown Source"}
+```markdown
+This is a citation [@doe2025].
+```
+:::
+
+## Page Break
+
+:::tabs
+::tab{title="Rendered"}
+\pagebreak
+::tab{title="Markdown Source"}
+```markdown
+\pagebreak
+```
+:::
+
+## Escaping Characters
+
+:::tabs
+::tab{title="Rendered"}
+\*Not italicized\*
+::tab{title="Markdown Source"}
+```markdown
+\*Not italicized\*
+```
+:::
+
+## Tabbed Content
+
+You can create tabbed sections to show multiple versions of content, like code in different languages or rendered output vs source code.
+
+**Syntax:**
+
+To create tabs, use the following markdown syntax:
+
+    :::tabs
+    ::tab{title="Python"}
+    ```python
+    def greet(name):
+        return f"Hello, {name}!"
+    print(greet("World"))
+    ```
+    ::tab{title="JavaScript"}
+    ```javascript
+    function greet(name) {
+        return `Hello, ${name}!`;
+    }
+    console.log(greet("World"));
+    ```
+    ::tab{title="Output"}
+    ```
+    Hello, World!
+    ```
+    :::
+
+**Example:**
+
+:::tabs
+::tab{title="Python"}
+```python
+def greet(name):
+    return f"Hello, {name}!"
+
+print(greet("World"))
+```
+::tab{title="JavaScript"}
+```javascript
+function greet(name) {
+    return `Hello, ${name}!`;
+}
+
+console.log(greet("World"));
+```
+::tab{title="Output"}
+```
+Hello, World!
+```
+:::
+
+## Cascading Folder-Specific CSS
+
+To apply `folder-specific CSS styles`{.highlight} that cascade down to all subfolders, you can place a `custom.css` file in any directory. The styles defined in this file will automatically apply to all markdown files within that directory and its subdirectories.
+
+**Example:**
+
+:::tabs
+::tab{title="Rendered"}
+`hello`{.highlight}
+::tab{title="Markdown Source"}
+```markdown
+`hello`{.highlight}
+```
+::tab{title="custom.css"}
+```css
+/* custom.css in the folder */
+span.highlight {
+    background-color: #fff831;
+    padding: 0 4px;
+    border-radius: 3px;
+    font-weight: bold;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 2rem;
+}
+```
+:::
