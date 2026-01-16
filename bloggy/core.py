@@ -416,6 +416,7 @@ class ContentRenderer(FrankenRenderer):
         self.footnotes, self.fn_counter = footnotes or {}, 0
         self.current_path = current_path  # Current post path for resolving relative links and images
         self.heading_counts = {}
+        self.mermaid_counter = 0
     
     def render_list_item(self, token):
         """Render list items with task list checkbox support"""
@@ -595,7 +596,8 @@ class ContentRenderer(FrankenRenderer):
                 # Use code without frontmatter for rendering
                 code = code_without_frontmatter
             
-            diagram_id = f"mermaid-{hash(code) & 0xFFFFFF}"
+            self.mermaid_counter += 1
+            diagram_id = f"mermaid-{abs(hash(code)) & 0xFFFFFF}-{self.mermaid_counter}"
             
             # Determine if we need to break out of normal content flow
             # This is required for viewport-based widths to properly center

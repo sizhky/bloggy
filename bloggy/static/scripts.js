@@ -847,6 +847,15 @@ document.addEventListener('click', (event) => {
 
 // Re-run mermaid on HTMX content swaps
 document.body.addEventListener('htmx:afterSwap', function(event) {
+    document.querySelectorAll('.mermaid-wrapper').forEach(wrapper => {
+        if (!wrapper.id) {
+            return;
+        }
+        if (!wrapper.querySelector('svg')) {
+            delete mermaidStates[wrapper.id];
+            delete wrapper.dataset.mermaidInteractive;
+        }
+    });
     mermaid.run().then(() => {
         scheduleMermaidInteraction();
     });
