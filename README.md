@@ -12,10 +12,15 @@ title: Bloggy
   Styles without limits
 </p>
 
----
 
 Bloggy is a Python‑first blogging tool: drop in Markdown, get a site instantly.
-Simple by default, infinitely customizable for CSS lovers.
+Simple by default.
+Infinitely customizable for CSS lovers.[^1]
+
+[^1]: If you're curious about how the intro was styled, [visit this page](https://github.com/sizhky/bloggy/blob/fa9a671931ad69b24139ba9d105bbadd8753b85b/custom.css#L36C1-L36C13).<br>
+    Check out the [Theming & CSS](bloggy%20manual/theming.md) guide for details on customizing your blog's appearance.
+
+---
 
 ## Quick Start
 1. Install Bloggy:

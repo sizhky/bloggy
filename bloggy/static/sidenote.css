@@ -14,7 +14,7 @@
     .sidenote.show { display: block; float: left; clear: both; width: 95%; margin: 0.75rem 2.5%; position: relative; }
 }
 @media (min-width: 1280px) {
-    .sidenote { display: block; float: right; clear: right; width: 14rem; margin-right: -16rem; margin-top: 0.25rem; margin-bottom: 0.75rem; }
+    .sidenote { display: block; float: right; clear: right; width: 18rem; margin-right: -20rem; margin-top: 0.25rem; margin-bottom: 0.75rem; }
     .sidenote.hl { background-color: rgba(221, 166, 55, 0.1); }
     .dark .sidenote.hl { background-color: rgba(96, 165, 250, 0.1); }
 }

@@ -518,6 +518,12 @@ class ContentRenderer(FrankenRenderer):
         self.fn_counter += 1
         n, target = self.fn_counter, token.target
         content = self.footnotes.get(target, f"[Missing footnote: {target}]")
+        if "\n" in content:
+            content = content.replace("\r\n", "\n")
+            placeholder = "__BLOGGY_PARA_BREAK__"
+            content = content.replace("\n\n", f"\n{placeholder}\n")
+            content = content.replace("\n", "<br>\n")
+            content = content.replace(f"\n{placeholder}\n", "\n\n")
         rendered = mst.markdown(content, partial(ContentRenderer, img_dir=self.img_dir, current_path=self.current_path)).strip()
         if rendered.startswith('<p>') and rendered.endswith('</p>'): rendered = rendered[3:-4]
         style = "text-sm leading-relaxed border-l-2 border-amber-400 dark:border-blue-400 pl-3 text-neutral-500 dark:text-neutral-400 transition-all duration-500 w-full my-2 xl:my-0"
