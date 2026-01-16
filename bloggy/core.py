@@ -1817,7 +1817,7 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
             mobile_posts_panel,
             mobile_toc_panel if mobile_toc_panel else None,
             content_with_sidebars,
-            Footer(Div(f"Powered by Bloggy", cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), # right justified footer
+            Footer(Div(NotStr('Powered by <a href="https://github.com/sizhky/bloggy" class="underline hover:text-white/80" target="_blank" rel="noopener noreferrer">Bloggy</a> and ❤️'), cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), # right justified footer
                    cls=f"layout-container {layout_fluid_class} w-full {layout_max_class} mx-auto px-6 mt-auto mb-6".strip(),
                    id="site-footer",
                    **_style_attr(layout_max_style))
@@ -1838,7 +1838,7 @@ def layout(*content, htmx, title=None, show_sidebar=False, toc_content=None, cur
                 id="main-content",
                 **_style_attr(layout_max_style)
             ),
-            Footer(Div("Powered by Bloggy", cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), 
+            Footer(Div(NotStr('Powered by <a href="https://github.com/sizhky/bloggy" class="underline hover:text-white/80" target="_blank" rel="noopener noreferrer">Bloggy</a> and ❤️'), cls="bg-slate-900 text-white rounded-lg p-4 my-4 dark:bg-slate-800 text-right"), 
                    cls=f"layout-container {layout_fluid_class} w-full {layout_max_class} mx-auto px-6 mt-auto mb-6".strip(),
                    id="site-footer",
                    **_style_attr(layout_max_style))

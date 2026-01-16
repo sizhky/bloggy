@@ -1,11 +1,9 @@
 ---
-title: Bloggy - A FastHTML Blogging Platform
+title: Bloggy - A Blogging Platform for Markdown and Python Lovers
 ---
 # Bloggy
 
 A lightweight, elegant blogging platform built with FastHTML that renders Markdown files into beautiful web pages with advanced features.
-
-Simple Table
 
 | Feature                     | Description                                      |
 |-----------------------------|--------------------------------------------------|
@@ -14,12 +12,29 @@ Simple Table
 | Modern UI                   | Responsive design, dark mode, three-panel layout, HTMX navigation |
 | Interactive Diagrams       | Zoomable, pannable Mermaid diagrams with fullscreen support |
 
-```typescript
-interface CSVParserAPI {
-  // Parse uploaded CSV file and return structured data
-  parseCSVFile(file: File): Promise<ParseResult>;
-}
-```
+
+## Quick Start
+1. Install Bloggy:
+   ```bash
+   pip install bloggy
+   ```
+
+2. Create a directory with your markdown files:
+   ```bash
+   mkdir my-blog
+   cd my-blog
+   echo "# Hello World" > hello.md
+   mkdir -p posts
+   echo "# My First Post\nThis is a sample blog post." > posts/first-post
+   ```
+
+3. Run Bloggy:
+   ```bash
+   bloggy .
+   ```
+
+4. Open your browser at `http://127.0.0.1:5001`
+
 
 ## Architecture Overview
 
@@ -534,27 +549,12 @@ cd bloggy
 pip install -e .
 ```
 
-## Quick Start
-
-1. Create a directory with your markdown files:
-   ```bash
-   mkdir my-blog
-   cd my-blog
-   echo "# Hello World" > hello.md
-   ```
-
-2. Run Bloggy:
-   ```bash
-   bloggy .
-   ```
-
-3. Open your browser at `http://127.0.0.1:5001`
-
 ## Configuration
 
-Bloggy supports three ways to configure your blog (in priority order):
+Bloggy supports four ways to configure your blog (in priority order):
 
-1. **`.bloggy` configuration file** (TOML format) - Highest priority
+1. cli arguments (e.g. `bloggy /path/to/markdown`) - Highest priority
+1. **[`.bloggy` configuration file](#using-a-.bloggy-configuration-file)** (TOML format)
 2. **Environment variables** - Fallback
 3. **Default values** - Final fallback
 
