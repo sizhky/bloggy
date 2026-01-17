@@ -1,8 +1,8 @@
 .sidenote-ref { 
     color: rgb(221, 166, 55); background-color: rgba(221, 166, 55, 0.15);
     display: inline-block; transition: transform 0.2s;
-    font-size: 0.6rem; vertical-align: top; line-height: 1;
-    padding: 0 0.15rem; border-radius: 0.2rem; margin-left: 0.1rem;
+    font-size: 1rem; vertical-align: top; line-height: 1;
+    padding: 0 0.2rem; border-radius: 0.25rem; margin-left: 0.1rem;
 }
 .sidenote-ref:after { content: "›"; }
 .dark .sidenote-ref { color: rgb(96, 165, 250); background-color: rgba(96, 165, 250, 0.15); }

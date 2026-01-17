@@ -1,7 +1,3 @@
----
-title: A Small Demonstration of All The Markdown Features That Are Under The Sun, Without Worrying About If They Are Supported Or Not
----
-
 ## Headings
 
 :::tabs
@@ -345,7 +341,7 @@ This is a footnote reference[^1].
 ```markdown
 This is a footnote reference[^1].
 
-[ ^1]: This is the footnote text. (Do not put a space after the opening bracketh)
+[ ^1]: This is the footnote text. (Do not put a space after the opening brackets)
 ```
 
 ## Definition Lists

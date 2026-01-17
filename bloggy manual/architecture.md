@@ -166,6 +166,7 @@ sequenceDiagram
 ```mermaid
 ---
 width: 80vw
+height: 60vh
 ---
 flowchart LR
     A[Raw Markdown] --> B{Extract Footnotes}
@@ -313,39 +314,3 @@ When `htmx.request` is detected, `layout()` returns only swappable fragments:
 - Debug logs track timing for each phase (section class, TOC build, CSS resolution, container build)
 - Logs written to `/tmp/bloggy_core.log` with rotation (10 MB, 10 days retention)
 - Request start/complete markers for easy debugging
-
-
-## Project Structure
-
-```mermaid
-graph LR
-    subgraph bloggy/
-        A[__init__.py]
-        B[core.py<br/>Main App Logic]
-        C[main.py<br/>Entry Point]
-        
-        subgraph static/
-            D[scripts.js<br/>Mermaid + Interactions]
-            E[sidenote.css<br/>Footnote Styles]
-            F[favicon.png]
-        end
-    end
-    
-    subgraph demo/
-        G[*.md Files<br/>Your Blog Posts]
-        
-        subgraph guides/
-            H[*.md Files<br/>Nested Content]
-        end
-    end
-    
-    B --> D
-    B --> E
-    B --> F
-    B -.reads.-> G
-    B -.reads.-> H
-    
-    style B fill:#ffe6cc
-    style D fill:#d1ecf1
-    style G fill:#d4edda
-```
