@@ -15,7 +15,7 @@ from .core import (
     from_md, extract_toc, build_toc_items, text_to_anchor,
     build_post_tree, ContentRenderer, extract_footnotes,
     preprocess_super_sub, preprocess_tabs,
-    get_bloggy_config, order_bloggy_entries
+    get_bloggy_config, order_bloggy_entries, _effective_abbreviations
 )
 from .config import get_config, reload_config
 
@@ -361,6 +361,7 @@ def build_post_tree_static(folder, root_folder):
                     continue
                 entries.append(item)
         entries = order_bloggy_entries(entries, get_bloggy_config(folder))
+        abbreviations = _effective_abbreviations(root_folder, folder)
     except (OSError, PermissionError): 
         return items
     
@@ -370,7 +371,7 @@ def build_post_tree_static(folder, root_folder):
                 continue
             sub_items = build_post_tree_static(item, root_folder)
             if sub_items:
-                folder_title = slug_to_title(item.name)
+                folder_title = slug_to_title(item.name, abbreviations=abbreviations)
                 items.append(Li(Details(
                     Summary(
                         Span(Span(cls="folder-chevron"), cls="w-4 mr-2 flex items-center justify-center shrink-0"),
@@ -381,7 +382,7 @@ def build_post_tree_static(folder, root_folder):
                     data_folder="true"), cls="my-1"))
         elif item.suffix == '.md':
             slug = str(item.relative_to(root_folder).with_suffix(''))
-            title = get_post_title(item)
+            title = get_post_title(item, abbreviations=abbreviations)
             
             # Use .html extension for static links
             items.append(Li(A(
@@ -498,6 +499,7 @@ def build_static_site(input_dir=None, output_dir=None):
     config = get_config()
     root_folder = config.get_root_folder()
     blog_title = config.get_blog_title()
+    abbreviations = _effective_abbreviations(root_folder)
     
     # Set default output directory
     if output_dir is None:
@@ -540,7 +542,7 @@ def build_static_site(input_dir=None, output_dir=None):
         
         # Parse frontmatter and content
         metadata, raw_content = parse_frontmatter(md_file)
-        post_title = metadata.get('title', get_post_title(md_file))
+        post_title = metadata.get('title', get_post_title(md_file, abbreviations=abbreviations))
         
         # Render markdown to HTML
         content_div = from_md(raw_content)

@@ -20,6 +20,7 @@ from .helpers import (
     get_post_title,
     get_bloggy_config,
     order_bloggy_entries,
+    _effective_abbreviations,
 )
 from .layout_helpers import (
     _resolve_layout_config,
@@ -552,6 +553,27 @@ def from_md(content, img_dir=None, current_path=None):
         else:
             img_dir = '/posts'
     
+    def _unescape_dollar(md):
+        import re
+        # Protect fenced code blocks first
+        code_blocks = []
+        def repl(m):
+            code_blocks.append(m.group(0))
+            return f"__BLOGGY_CODEBLOCK_{len(code_blocks)-1}__"
+        md = re.sub(r'(```[\s\S]*?```|~~~[\s\S]*?~~~)', repl, md)
+        # Protect inline code spans (including multi-backtick)
+        def repl_inline(m):
+            code_blocks.append(m.group(0))
+            return f"__BLOGGY_CODEBLOCK_{len(code_blocks)-1}__"
+        md = re.sub(r'(`+)([^`]*?)\1', repl_inline, md)
+        # Unescape dollar signs outside code
+        md = md.replace(r'\$', '$')
+        # Restore code blocks/spans
+        for i, block in enumerate(code_blocks):
+            md = md.replace(f"__BLOGGY_CODEBLOCK_{i}__", block)
+        return md
+
+    content = _unescape_dollar(content)
     content, footnotes = extract_footnotes(content)
     content = preprocess_super_sub(content)  # Preprocess superscript/subscript
     content, tab_data_store = preprocess_tabs(content)  # Preprocess tabs and get tab data
@@ -1775,6 +1797,7 @@ def build_post_tree(folder):
                 entries.append(item)
         config = get_bloggy_config(folder)
         entries = order_bloggy_entries(entries, config)
+        abbreviations = _effective_abbreviations(root, folder)
         logger.debug(
             "[DEBUG] build_post_tree entries for %s: %s",
             folder,
@@ -1789,7 +1812,7 @@ def build_post_tree(folder):
             if item.name.startswith('.'): continue
             sub_items = build_post_tree(item)
             if sub_items:
-                folder_title = slug_to_title(item.name)
+                folder_title = slug_to_title(item.name, abbreviations=abbreviations)
                 items.append(Li(Details(
                     Summary(
                         Span(Span(cls="folder-chevron"), cls="w-4 mr-2 flex items-center justify-center shrink-0"),
@@ -1801,7 +1824,7 @@ def build_post_tree(folder):
         elif item.suffix == '.md':
             slug = str(item.relative_to(root).with_suffix(''))
             title_start = time.time()
-            title = get_post_title(item)
+            title = get_post_title(item, abbreviations=abbreviations)
             title_time = (time.time() - title_start) * 1000
             if title_time > 1:  # Only log if it takes more than 1ms
                 logger.debug(f"[DEBUG] Getting title for {item.name} took {title_time:.2f}ms")
@@ -1815,7 +1838,7 @@ def build_post_tree(folder):
                 data_path=slug)))
         elif item.suffix == '.pdf':
             slug = str(item.relative_to(root).with_suffix(''))
-            title = slug_to_title(item.stem)
+            title = slug_to_title(item.stem, abbreviations=abbreviations)
             items.append(Li(A(
                 Span(cls="w-4 mr-2 shrink-0"),
                 Span(UkIcon("file-text", cls="text-slate-400 w-4 h-4"), cls="w-4 mr-2 flex items-center justify-center shrink-0"),
@@ -1913,13 +1936,15 @@ def post_detail(path: str, htmx):
     request_start = time.time()
     logger.info(f"\n[DEBUG] ########## REQUEST START: /posts/{path} ##########")
     
-    file_path = get_root_folder() / f'{path}.md'
-    pdf_path = get_root_folder() / f'{path}.pdf'
+    root = get_root_folder()
+    abbreviations = _effective_abbreviations(root)
+    file_path = root / f'{path}.md'
+    pdf_path = root / f'{path}.pdf'
     
     # Check if file exists
     if not file_path.exists():
         if pdf_path.exists():
-            post_title = f"{slug_to_title(Path(path).name)} (PDF)"
+            post_title = f"{slug_to_title(Path(path).name, abbreviations=abbreviations)} (PDF)"
             pdf_src = f"/posts/{path}.pdf"
             pdf_content = Div(
                 Div(
@@ -1952,7 +1977,7 @@ def post_detail(path: str, htmx):
     metadata, raw_content = parse_frontmatter(file_path)
     
     # Get title from frontmatter or filename
-    post_title = metadata.get('title', slug_to_title(path.split('/')[-1]))
+    post_title = metadata.get('title', slug_to_title(path.split('/')[-1], abbreviations=abbreviations))
     
     # Render the markdown content with current path for relative link resolution
     md_start = time.time()

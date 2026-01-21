@@ -7,10 +7,20 @@ from pathlib import Path
 import frontmatter
 from loguru import logger
 
-slug_to_title = lambda s: ' '.join(
-    word if word.isupper() else word[0].upper() + word[1:]
-    for word in s.replace('-', ' ').replace('_', ' ').split()
-)
+def slug_to_title(s: str, abbreviations=None) -> str:
+    abbreviations = abbreviations or []
+    abbrev_set = {str(word).strip().lower() for word in abbreviations if str(word).strip()}
+    words = s.replace('-', ' ').replace('_', ' ').split()
+    titled = []
+    for word in words:
+        lowered = word.lower()
+        if lowered in abbrev_set:
+            titled.append(word.upper())
+        elif word.isupper():
+            titled.append(word)
+        else:
+            titled.append(word[0].upper() + word[1:])
+    return ' '.join(titled)
 
 def _strip_inline_markdown(text: str) -> str:
     cleaned = text or ""
@@ -72,11 +82,11 @@ def parse_frontmatter(file_path: str | Path):
         print(f"Error parsing frontmatter from {file_path}: {e}")
         return {}, open(file_path).read()
 
-def get_post_title(file_path: str | Path) -> str:
+def get_post_title(file_path: str | Path, abbreviations=None) -> str:
     """Get post title from frontmatter or filename"""
     metadata, _ = parse_frontmatter(file_path)
     file_path = Path(file_path)
-    return metadata.get('title', slug_to_title(file_path.stem))
+    return metadata.get('title', slug_to_title(file_path.stem, abbreviations=abbreviations))
 
 @lru_cache(maxsize=128)
 def _cached_bloggy_config(path_str: str, mtime: float):
@@ -94,6 +104,7 @@ def _normalize_bloggy_config(parsed):
         "folders_first": True,
         "folders_always_first": False,
         "layout_max_width": None,
+        "abbreviations": None,
     }
     if not isinstance(parsed, dict):
         return config
@@ -133,7 +144,23 @@ def _normalize_bloggy_config(parsed):
             value = value.strip()
             config[key] = value if value else None
 
+    abbreviations = parsed.get("abbreviations")
+    if isinstance(abbreviations, (list, tuple, set)):
+        config["abbreviations"] = [str(item).strip() for item in abbreviations if str(item).strip()]
+    elif isinstance(abbreviations, str):
+        parts = [part.strip() for part in abbreviations.split(",")]
+        config["abbreviations"] = [part for part in parts if part]
+
     return config
+
+def _effective_abbreviations(root: Path, folder: Path | None = None):
+    root_config = get_bloggy_config(root)
+    root_abbrevs = root_config.get("abbreviations") or []
+    if folder is None or folder == root:
+        return root_abbrevs
+    folder_config = get_bloggy_config(folder)
+    folder_abbrevs = folder_config.get("abbreviations")
+    return folder_abbrevs if folder_abbrevs is not None else root_abbrevs
 
 def get_bloggy_config(folder: Path):
     bloggy_path = folder / ".bloggy"
@@ -237,6 +264,7 @@ def list_bloggy_posts(root: Path, include_hidden: bool = False) -> list[dict]:
     root = root.resolve()
     root_parts = len(root.parts)
     posts: list[dict] = []
+    abbreviations = _effective_abbreviations(root)
 
     for path in sorted(root.rglob("*")):
         if not path.is_file():
@@ -252,10 +280,10 @@ def list_bloggy_posts(root: Path, include_hidden: bool = False) -> list[dict]:
         rel = Path(*rel_parts)
         slug = rel.with_suffix("").as_posix()
         if path.suffix.lower() == ".md":
-            title = get_post_title(path)
+            title = get_post_title(path, abbreviations=abbreviations)
             kind = "md"
         else:
-            title = slug_to_title(rel.stem)
+            title = slug_to_title(rel.stem, abbreviations=abbreviations)
             kind = "pdf"
 
         posts.append(
@@ -277,6 +305,7 @@ def list_bloggy_entries(root: Path, relative: str = ".", include_hidden: bool = 
     if not target.exists() or not target.is_dir():
         return {"error": "Folder not found"}
 
+    abbreviations = _effective_abbreviations(root, target)
     entries: list[dict] = []
     for item in sorted(target.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())):
         if not include_hidden and item.name.startswith("."):
@@ -289,10 +318,10 @@ def list_bloggy_entries(root: Path, relative: str = ".", include_hidden: bool = 
         rel = item.relative_to(root)
         slug = rel.with_suffix("").as_posix()
         if item.suffix.lower() == ".md":
-            title = get_post_title(item)
+            title = get_post_title(item, abbreviations=abbreviations)
             kind = "md"
         else:
-            title = slug_to_title(rel.stem)
+            title = slug_to_title(rel.stem, abbreviations=abbreviations)
             kind = "pdf"
         entries.append({"type": kind, "path": slug, "title": title})
 
