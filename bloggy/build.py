@@ -248,6 +248,21 @@ def generate_static_html(title, body_content, blog_title, favicon_href):
                 });
             }, 100);
             
+            function replaceEscapedDollarPlaceholders(root) {
+                const placeholder = '@@BLOGGY_DOLLAR@@';
+                const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+                const nodes = [];
+                let node;
+                while ((node = walker.nextNode())) {
+                    if (node.nodeValue && node.nodeValue.includes(placeholder)) {
+                        nodes.push(node);
+                    }
+                }
+                nodes.forEach((textNode) => {
+                    textNode.nodeValue = textNode.nodeValue.split(placeholder).join('$');
+                });
+            }
+
             // Initialize KaTeX rendering
             if (window.renderMathInElement) {
                 renderMathInElement(document.body, {
@@ -258,6 +273,7 @@ def generate_static_html(title, body_content, blog_title, favicon_href):
                     throwOnError: false
                 });
             }
+            replaceEscapedDollarPlaceholders(document.body);
         });
         
         // Sidenote interactions

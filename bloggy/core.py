@@ -553,7 +553,7 @@ def from_md(content, img_dir=None, current_path=None):
         else:
             img_dir = '/posts'
     
-    def _unescape_dollar(md):
+    def _protect_escaped_dollar(md):
         import re
         # Protect fenced code blocks first
         code_blocks = []
@@ -566,14 +566,18 @@ def from_md(content, img_dir=None, current_path=None):
             code_blocks.append(m.group(0))
             return f"__BLOGGY_CODEBLOCK_{len(code_blocks)-1}__"
         md = re.sub(r'(`+)([^`]*?)\1', repl_inline, md)
-        # Unescape dollar signs outside code
-        md = md.replace(r'\$', '$')
+        # Replace escaped dollars with a placeholder to avoid KaTeX auto-render
+        def replace_escaped_dollar(m):
+            slashes = m.group(1)
+            # Remove one escaping backslash, keep the rest literal
+            return '\\' * (len(slashes) - 1) + '@@BLOGGY_DOLLAR@@'
+        md = re.sub(r'(\\+)\$', replace_escaped_dollar, md)
         # Restore code blocks/spans
         for i, block in enumerate(code_blocks):
             md = md.replace(f"__BLOGGY_CODEBLOCK_{i}__", block)
         return md
 
-    content = _unescape_dollar(content)
+    content = _protect_escaped_dollar(content)
     content, footnotes = extract_footnotes(content)
     content = preprocess_super_sub(content)  # Preprocess superscript/subscript
     content, tab_data_store = preprocess_tabs(content)  # Preprocess tabs and get tab data
@@ -719,6 +723,21 @@ hdrs = (
     Script(src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"),
     Script(src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"),
     Script("""
+        function replaceEscapedDollarPlaceholders(root) {
+            const placeholder = '@@BLOGGY_DOLLAR@@';
+            const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+            const nodes = [];
+            let node;
+            while ((node = walker.nextNode())) {
+                if (node.nodeValue && node.nodeValue.includes(placeholder)) {
+                    nodes.push(node);
+                }
+            }
+            nodes.forEach((textNode) => {
+                textNode.nodeValue = textNode.nodeValue.split(placeholder).join('$');
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             renderMathInElement(document.body, {
                 delimiters: [
@@ -727,10 +746,11 @@ hdrs = (
                 ],
                 throwOnError: false
             });
+            replaceEscapedDollarPlaceholders(document.body);
         });
         
         // Re-render math after HTMX swaps
-        document.body.addEventListener('htmx:afterSwap', function() {
+        document.body.addEventListener('htmx:afterSwap', function(event) {
             renderMathInElement(document.body, {
                 delimiters: [
                     {left: '$$', right: '$$', display: true},
@@ -738,6 +758,7 @@ hdrs = (
                 ],
                 throwOnError: false
             });
+            replaceEscapedDollarPlaceholders(event.target || document.body);
         });
     """),
     Link(rel="preconnect", href="https://fonts.googleapis.com"), 
