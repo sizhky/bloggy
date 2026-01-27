@@ -70,6 +70,7 @@ Simple by default. Infinitely customizable for CSS lovers.[^1]
 - **Pandoc-style Attributes**: Add classes to inline text with `` `text`{.class #id} `` syntax for semantic markup (renders as `<span>` tags, not `<code>`)
 - **Cascading Custom CSS**: Add `custom.css` or `style.css` files at multiple levels (root, folders) with automatic scoping
 - **Title Abbreviations**: Configure `.bloggy` `abbreviations` to force uppercase acronyms in sidebar and slug-based titles (e.g., `ai-features` $\to$ `AI Features`)
+- **Folder Notes**: `index.md`, `README.md`, or `<folder>.md` can act as a folder summary; clicking the folder name opens it
 
 See the full list in [Markdown Writing Features](bloggy%20manual/markdown-features.md).
 

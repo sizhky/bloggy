@@ -398,7 +398,7 @@ def build_post_tree_static(folder, root_folder):
                 note_link = A(
                     href=f'/posts/{note_slug}.html',
                     cls="folder-note-link truncate min-w-0 hover:underline",
-                    title=f"Open {folder_title}",
+                    title=f"Open: {folder_title}",
                     onclick="event.stopPropagation();",
                 )(folder_title)
             title_node = note_link if note_link else Span(folder_title, cls="truncate min-w-0", title=folder_title)

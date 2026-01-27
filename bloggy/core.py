@@ -248,6 +248,7 @@ class ContentRenderer(FrankenRenderer):
             return f'<li class="task-list-item flex items-start" style="list-style: none; margin: 0.5rem 0;">{checkbox}<span class="flex-1">{content}</span></li>\n'
         
         return f'<li>{inner}</li>\n'
+
     
     def render_youtube_embed(self, token):
         video_id = token.video_id
