@@ -15,7 +15,7 @@ from .core import (
     from_md, extract_toc, build_toc_items, text_to_anchor,
     build_post_tree, ContentRenderer, extract_footnotes,
     preprocess_super_sub, preprocess_tabs,
-    get_bloggy_config, order_bloggy_entries, _effective_abbreviations
+    get_bloggy_config, order_bloggy_entries, _effective_abbreviations, find_folder_note_file
 )
 from .config import get_config, reload_config
 
@@ -365,6 +365,7 @@ def build_post_tree_static(folder, root_folder):
                         break
 
         entries = []
+        folder_note = find_folder_note_file(folder)
         for item in folder.iterdir():
             if item.name == ".bloggy":
                 continue
@@ -373,6 +374,8 @@ def build_post_tree_static(folder, root_folder):
                     continue
                 entries.append(item)
             elif item.suffix == '.md':
+                if folder_note and item.resolve() == folder_note.resolve():
+                    continue
                 if index_file and item.resolve() == index_file.resolve():
                     continue
                 entries.append(item)
@@ -386,16 +389,36 @@ def build_post_tree_static(folder, root_folder):
             if item.name.startswith('.'): 
                 continue
             sub_items = build_post_tree_static(item, root_folder)
+            folder_title = slug_to_title(item.name, abbreviations=abbreviations)
+            note_file = find_folder_note_file(item)
+            note_link = None
+            note_slug = None
+            if note_file:
+                note_slug = str(note_file.relative_to(root_folder).with_suffix(''))
+                note_link = A(
+                    href=f'/posts/{note_slug}.html',
+                    cls="folder-note-link truncate min-w-0 hover:underline",
+                    title=f"Open {folder_title}",
+                    onclick="event.stopPropagation();",
+                )(folder_title)
+            title_node = note_link if note_link else Span(folder_title, cls="truncate min-w-0", title=folder_title)
             if sub_items:
-                folder_title = slug_to_title(item.name, abbreviations=abbreviations)
                 items.append(Li(Details(
                     Summary(
                         Span(Span(cls="folder-chevron"), cls="w-4 mr-2 flex items-center justify-center shrink-0"),
                         Span(UkIcon("folder", cls="text-blue-500 w-4 h-4"), cls="w-4 mr-2 flex items-center justify-center shrink-0"),
-                        Span(folder_title, cls="truncate min-w-0", title=folder_title),
+                        title_node,
                         cls="flex items-center font-medium cursor-pointer py-1 px-2 hover:text-blue-600 select-none list-none rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-w-0"),
                     Ul(*sub_items, cls="ml-4 pl-2 space-y-1 border-l border-slate-100 dark:border-slate-800"),
                     data_folder="true"), cls="my-1"))
+            elif note_file and note_slug:
+                title_text = Span(folder_title, cls="truncate min-w-0", title=folder_title)
+                items.append(Li(A(
+                    Span(cls="w-4 mr-2 shrink-0"),
+                    Span(UkIcon("folder", cls="text-blue-500 w-4 h-4"), cls="w-4 mr-2 flex items-center justify-center shrink-0"),
+                    title_text,
+                    href=f'/posts/{note_slug}.html',
+                    cls="flex items-center py-1 px-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors min-w-0")))
         elif item.suffix == '.md':
             slug = str(item.relative_to(root_folder).with_suffix(''))
             title = get_post_title(item, abbreviations=abbreviations)

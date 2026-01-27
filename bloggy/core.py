@@ -21,6 +21,7 @@ from .helpers import (
     get_bloggy_config,
     order_bloggy_entries,
     _effective_abbreviations,
+    find_folder_note_file,
 )
 from .layout_helpers import (
     _resolve_layout_config,
@@ -1804,6 +1805,7 @@ def build_post_tree(folder):
     try:
         index_file = find_index_file() if folder == root else None
         entries = []
+        folder_note = find_folder_note_file(folder)
         for item in folder.iterdir():
             if item.name == ".bloggy":
                 continue
@@ -1812,6 +1814,8 @@ def build_post_tree(folder):
                     continue
                 entries.append(item)
             elif item.suffix in ('.md', '.pdf'):
+                if folder_note and item.resolve() == folder_note.resolve():
+                    continue
                 # Skip the file being used for home page (index.md takes precedence over readme.md)
                 if index_file and item.resolve() == index_file.resolve():
                     continue
@@ -1832,16 +1836,39 @@ def build_post_tree(folder):
         if item.is_dir():
             if item.name.startswith('.'): continue
             sub_items = build_post_tree(item)
+            folder_title = slug_to_title(item.name, abbreviations=abbreviations)
+            note_file = find_folder_note_file(item)
+            note_link = None
+            note_slug = None
+            if note_file:
+                note_slug = str(note_file.relative_to(root).with_suffix(''))
+                note_link = A(
+                    href=f'/posts/{note_slug}',
+                    hx_get=f'/posts/{note_slug}', hx_target="#main-content", hx_push_url="true", hx_swap="outerHTML show:window:top settle:0.1s",
+                    cls="folder-note-link truncate min-w-0 hover:underline",
+                    title=f"Open {folder_title}",
+                    onclick="event.stopPropagation();",
+                )(folder_title)
+            title_node = note_link if note_link else Span(folder_title, cls="truncate min-w-0", title=folder_title)
             if sub_items:
-                folder_title = slug_to_title(item.name, abbreviations=abbreviations)
                 items.append(Li(Details(
                     Summary(
                         Span(Span(cls="folder-chevron"), cls="w-4 mr-2 flex items-center justify-center shrink-0"),
                         Span(UkIcon("folder", cls="text-blue-500 w-4 h-4"), cls="w-4 mr-2 flex items-center justify-center shrink-0"),
-                        Span(folder_title, cls="truncate min-w-0", title=folder_title),
+                        title_node,
                         cls="flex items-center font-medium cursor-pointer py-1 px-2 hover:text-blue-600 select-none list-none rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-w-0"),
                     Ul(*sub_items, cls="ml-4 pl-2 space-y-1 border-l border-slate-100 dark:border-slate-800"),
                     data_folder="true"), cls="my-1"))
+            elif note_file and note_slug:
+                title_text = Span(folder_title, cls="truncate min-w-0", title=folder_title)
+                items.append(Li(A(
+                    Span(cls="w-4 mr-2 shrink-0"),
+                    Span(UkIcon("folder", cls="text-blue-500 w-4 h-4"), cls="w-4 mr-2 flex items-center justify-center shrink-0"),
+                    title_text,
+                    href=f'/posts/{note_slug}',
+                    hx_get=f'/posts/{note_slug}', hx_target="#main-content", hx_push_url="true", hx_swap="outerHTML show:window:top settle:0.1s",
+                    cls="post-link flex items-center py-1 px-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors min-w-0",
+                    data_path=note_slug)))
         elif item.suffix == '.md':
             slug = str(item.relative_to(root).with_suffix(''))
             title_start = time.time()

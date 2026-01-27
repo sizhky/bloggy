@@ -326,3 +326,24 @@ def list_bloggy_entries(root: Path, relative: str = ".", include_hidden: bool = 
         entries.append({"type": kind, "path": slug, "title": title})
 
     return {"path": target.relative_to(root).as_posix(), "entries": entries}
+
+def find_folder_note_file(folder: Path) -> Path | None:
+    """Return the preferred folder note file (index.md, readme.md, or foldername.md)."""
+    try:
+        folder_name = folder.name.lower()
+        index_file = None
+        readme_file = None
+        named_file = None
+        for item in folder.iterdir():
+            if not item.is_file() or item.suffix.lower() != ".md":
+                continue
+            stem = item.stem.lower()
+            if stem == "index":
+                index_file = item
+            elif stem == "readme":
+                readme_file = item
+            elif stem == folder_name:
+                named_file = item
+        return index_file or readme_file or named_file
+    except OSError:
+        return None
